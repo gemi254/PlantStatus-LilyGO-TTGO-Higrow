@@ -11,4 +11,5 @@
 
 ## Install
 Download firmware from /firmware folder and upload to you device using **esptool.py**
+
 esptool.py --port COM5 write_flash -fs 1MB -fm dout 0x0 PlantStatus1.0.0.bin
