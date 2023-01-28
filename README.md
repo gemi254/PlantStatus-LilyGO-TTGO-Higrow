@@ -9,5 +9,6 @@
 + No need to compile for each device.
 + Mqtt wakeup function.
 
-Download firmware from /firmware folder and upload
-esptool.py --port COM5 write_flash -fs 1MB -fm dout 0x0 firmware.bin
+## Install
+Download firmware from /firmware folder and upload to you device using **esptool.py**
+esptool.py --port COM5 write_flash -fs 1MB -fm dout 0x0 PlantStatus1.0.0.bin
