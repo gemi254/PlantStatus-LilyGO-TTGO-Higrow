@@ -4,4 +4,5 @@
 .vscode/launch.json
 .vscode/ipch
 test/
+include/user-variables.local.h
 
