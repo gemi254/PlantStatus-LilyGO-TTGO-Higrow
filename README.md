@@ -9,3 +9,5 @@
 + No need to compile for each device.
 + Mqtt wakeup function.
 
+Download firmware from /firmware folder and upload
+esptool.py --port COM5 write_flash -fs 1MB -fm dout 0x0 firmware.bin
