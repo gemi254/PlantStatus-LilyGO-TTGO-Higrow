@@ -1,3 +1,5 @@
+#define CHUNKSIZE (1024 * 4)  //Size of chunks to send in view files
+
 // Template for header, begin of the config form
 PROGMEM const char HTML_PAGE_DEF_START[] = R"=====(
 <!DOCTYPE HTML>
@@ -135,7 +137,7 @@ button:hover {
     <div class="w-100">
       <table>
         <caption>
-          <h3>{appName} sensors</h3>
+          <h3>{appName} status</h3>
         </caption>
         <tbody>
 )=====";
@@ -153,8 +155,9 @@ PROGMEM const char HTML_PAGE_DEF_END[] = R"=====(
           <tfoot>
             <tr>
               <td style="text-align: center;" colspan="5">
-              <button title='Configure this device' onClick='window.location.href="/cfg"'>Configure</button>
+              <button title='View sensors daily log' onClick='window.location.href="/cmd?view="'>Logs</button>
               <button title='Send device mqtt discovery message to Homeassistant' onClick='window.location.href="/cmd?hasDiscovery=1"'>HAS discovery</button>
+              <button title='Configure this device' onClick='window.location.href="/cfg"'>Configure</button>
               <button title='Reboot device' onClick='window.location.href="/cmd?reboot=1"'>Reboot</button>
               <button title='Factory defaults' onClick='window.location.href="/cmd?reset=1"'>Reset</button>
             </tr>
@@ -225,6 +228,8 @@ void mqttSetupDevice(String chipId);
 
 // Handler function for root of the web page 
 static void handleRoot(){
+  //Read on each refresh
+  readSensors();
 
   String jsonBuff = getJsonBuff();
   DeserializationError error;
@@ -267,13 +272,40 @@ static void handleRoot(){
   ResetCountdownTimer();
 }
 
+//Show a text file in browser window
+static void handleViewFile(String fileName){
+  File f = STORAGE.open(fileName.c_str());
+  if (!f) {
+    f.close();
+    const char* resp_str = "File does not exist or cannot be opened";
+    LOG_ERR("%s: %s", resp_str, fileName.c_str());
+    pServer->send(200, "text/html", resp_str);
+    pServer->client().flush(); 
+    return;  
+  }
+
+  LOG_INF("View file: %s, size: %0.1fMB\n", fileName.c_str(), (float)(f.size()/(ONEMEG)));
+  pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
+  byte chunk[CHUNKSIZE];
+  size_t chunksize;
+  do {
+    chunksize = f.read(chunk, CHUNKSIZE); 
+    pServer->sendContent((char *)chunk, chunksize);
+  } while (chunksize != 0);
+  f.close();
+  pServer->client().flush(); 
+
+}
+
 // Handler function for commands from the main web page
 static void handleCmd(){
+  //WebServer::args() ignores empty parameters 
   for (int i = 0; i < pServer->args(); i++) {
-    LOG_DBG("Cmds received: [%i] %s, %s ",i, pServer->argName(i), pServer->arg(i)  );
+    LOG_DBG("Cmds received: [%i] %s, %s \n",i, pServer->argName(i), pServer->arg(i).c_str()  );
     String out(HTML_PAGE_MESSAGE);
     out.replace("{url}", "/");
     out.replace("{refresh}", "3000");
+    
     if(pServer->argName(i)=="hasDiscovery"){
       mqttSetupDevice(getChipID()); 
       out.replace("{msg}", "Sended mqtt homeassistant device discovery");
@@ -281,7 +313,30 @@ static void handleCmd(){
       pServer->send(200, "text/html", out);
       pServer->client().flush(); 
       return;
-    }else if(pServer->argName(i)=="reboot"){
+
+    }else if(pServer->argName(i)=="view"){
+      String file(pServer->arg(i));
+      if(file=="") file = getLogFileName(false);
+      handleViewFile(file);
+      pServer->sendContent("\n\nFile: " + file );
+      //pServer->sendContent(HTML_PING_SCRIPT);
+      pServer->client().flush(); 
+      
+      return;
+
+    }else if(pServer->argName(i)=="del"){
+      String file(pServer->arg(i));
+      if(STORAGE.remove(file.c_str())){
+        out.replace("{msg}", "Deleted file: " + file);
+      }else{
+        out.replace("{msg}", "Failed to delete file: " + file);
+      }
+      out.replace("{title}", "Delete");
+      pServer->send(200, "text/html", out);
+      pServer->client().flush(); 
+      return;
+
+   }else if(pServer->argName(i)=="reboot"){
       out.replace("{msg}", "Rebooting ESP..<br>Please wait");
       out.replace("{title}", "Reboot");
       pServer->send(200, "text/html", out);
@@ -289,6 +344,7 @@ static void handleCmd(){
       delay(1000);
       ESP.restart();
       return;      
+
     }else if(pServer->argName(i)=="reset"){
       out.replace("{msg}", "Deleting ini files..<br>Please wait");
       out.replace("{title}", "Reboot");
@@ -307,6 +363,7 @@ static void handlePing(){
   pServer->send(200, "text/html", "");
   ResetCountdownTimer();
 }
+
 
 // Handler function for AP config form
 static void handleAssistRoot() { 
