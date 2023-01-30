@@ -79,6 +79,7 @@ class ConfigAssist{
       //Set hostname
       if(_valid) _hostName = get(HOSTNAME_KEY);
       if(_hostName=="") _hostName = getDefaultHostName("ESP");
+      else _hostName.replace("{mac}", getMacID());
     }
     
     //if not Use dictionary load default minimal config
@@ -100,13 +101,16 @@ class ConfigAssist{
       server.on("/cfg",handler);
       LOG_INF("AP HTTP server started");
     } 
+    // Get a temponary hostname
+    static String getMacID(){
+      String mac = WiFi.macAddress();
+      mac.replace(":","");
+      return mac.substring(6);
+    }
 
     // Get a temponary hostname
     static String getDefaultHostName(String appName){
-      String mac = WiFi.macAddress();
-      mac.replace(":","");
-      mac = mac.substring(6);
-      return String(appName) + "_" + mac;  
+      return String(appName) + "_" + getMacID();  
     }
 
     // Implement operator [] i.e. val = config['key']    
