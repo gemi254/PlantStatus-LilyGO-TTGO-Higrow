@@ -1,65 +1,49 @@
+#define ONEMEG (1024 * 1024)
+#define DATA_DIR "/data" //Dicectory to save data logs
 String readString; // do not change this variable
 
+//Append text at end of a file
+void writeFile(const char * path, const char * message) {
+  LOG_DBG("Writing file: %s", path);
 
-void writeFile(fs::FS & fs, const char * path, const char * message) {
-  Serial.printf("Writing file: %s\r\n", path);
-
-  File file = fs.open(path, FILE_APPEND);
+  File file = STORAGE.open(path, FILE_APPEND);
   if (!file) {
-    Serial.println("- failed to open file for writing");
+    LOG_ERR("\nFailed to open: %s", path);
     return;
   }
   if (file.print(message)) {
-    Serial.println("- file written");
+    LOG_DBG(" OK\n");
   } else {
-    Serial.println("- frite failed");
+    LOG_ERR("\nFailed to write: %s\n", path);
   }
 }
 
-void readFile(fs::FS & fs, const char * path) {
-  //  Serial.printf("Reading file: %s\r\n", path);
-  File file = fs.open(path);
-  if (!file || file.isDirectory()) {
-    Serial.println("- failed to open file for reading");
-    return;
-  }
+void listDir(const char * dirname, uint8_t levels) {
+  LOG_INF("Listing directory: %s\r\n", dirname);
 
-  //  Serial.println("- read from file:");
-  while (file.available()) {
-    delay(2);  //delay to allow byte to arrive in input buffer
-    char c = file.read();
-    readString += c;
-  }
-  //  Serial.println(readString);
-  file.close();
-}
-
-void listDir(fs::FS & fs, const char * dirname, uint8_t levels) {
-  Serial.printf("Listing directory: %s\r\n", dirname);
-
-  File root = fs.open(dirname);
+  File root = STORAGE.open(dirname);
   if (!root) {
-    Serial.println("- failed to open directory");
+    LOG_ERR("- failed to open directory");
     return;
   }
   if (!root.isDirectory()) {
-    Serial.println(" - not a directory");
+    LOG_ERR(" - not a directory");
     return;
   }
 
   File file = root.openNextFile();
   while (file) {
     if (file.isDirectory()) {
-      Serial.print("  DIR : ");
-      Serial.println(file.name());
+      LOG_INF("  DIR : ");
+      LOG_INF("%s" ,file.name());
       if (levels) {
-        listDir(fs, file.name(), levels - 1);
+        listDir(file.name(), levels - 1);
       }
     } else {
-      Serial.print("  FILE: ");
-      Serial.print(file.name());
-      Serial.print("\tSIZE: ");
-      Serial.println(file.size());
+      LOG_INF("  FILE: ");
+      LOG_INF("%s" ,file.name());
+      LOG_INF("\tSIZE: ");
+      LOG_INF("%lu",file.size());
     }
     file = root.openNextFile();
   }
