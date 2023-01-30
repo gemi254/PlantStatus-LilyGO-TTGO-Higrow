@@ -79,6 +79,44 @@ float readSoilTemp()
   #endif
   return temp;
 }
+String getLogFileName(bool createDir = true){
+  if(!timeSynchronized) return "";
+  String dirName = getCurDateTimeString(true,false);
+  String fileName = getCurDateTimeString(false,true);
+  if(createDir) STORAGE.mkdir(dirName);
+  return String(DATA_DIR) + dirName + fileName + ".csv";
+}
+//Log sensors to a csv file on storage
+void logSensors(){
+  if(!timeSynchronized) return;
+  String sep="\t";  
+  String fullPath =getLogFileName();
+  String line = "";
+  if(!STORAGE.exists(fullPath)){
+    LOG_DBG("New log file: %s\n", fullPath.c_str());
+    line += "DateTime" + sep + sep;
+    line += "temp" + sep;
+    line += "humid" + sep;
+    line += "pressr" + sep;
+    line += "lux" + sep;
+    line += "soil" + sep;
+    line += "salt" + sep;
+    line += "batPerc";
+    line +="\n";
+  }
+  line += data.time + sep;
+  line += data.temp + sep;
+  line += data.humid + sep;
+  line += data.pressure + sep;
+  line += data.lux + sep;
+  line += data.soil + sep;
+  line += data.salt + sep;
+  line += data.batPerc;
+  line +="\n";
+  writeFile(fullPath.c_str(), line.c_str());
+  LOG_DBG("Log to: %s, line: %s", fullPath.c_str(),line.c_str() );
+}
+
 // Read on board sensors
 void readSensors(){
   float luxRead = lightMeter.readLightLevel(); // 1st read seems to return 0 always
@@ -132,4 +170,10 @@ void readSensors(){
   data.bootCnt = lastBoot["boot_cnt"].toInt();
   data.bootCntError = lastBoot["boot_cnt_err"].toInt();
   data.sleepReason = lastBoot["sleep_reason"];
+  
+  //Append to log
+  logSensors();
+  //Next auto reading reset
+  sensorReadMs = millis();
 }
+
