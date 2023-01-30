@@ -70,13 +70,14 @@ time_t convertDateTimeString(String sDateTime){
   return makeTime(tm);
 }
 // Get a string of current date/time
-String getCurDateTimeString(bool isFolder = false) {
+String getCurDateTimeString(bool isFolder = false, bool isFile=false) {
   // construct timestamp from date/time
   if(!timeSynchronized) return "";
   size_t buff_Len = 64;
   char buff[buff_Len];
   time_t currEpoch = getEpoch();    
-  if(isFolder) strftime(buff, buff_Len, "/%Y_%m_%d/%Y_%m_%d-%H_%M_%S", localtime(&currEpoch));
+  if(isFolder) strftime(buff, buff_Len, "/%Y-%m/", localtime(&currEpoch));
+  else if (isFile) strftime(buff, buff_Len, "%Y-%m-%d", localtime(&currEpoch));  
   else strftime(buff, buff_Len, "%Y-%m-%d %H:%M:%S", localtime(&currEpoch));
   return String(buff);
 }
@@ -109,7 +110,7 @@ void ResetCountdownTimer(){
 
 void reset(){
   LOG_DBG("Removing ini files.");
-  listDir(SPIFFS, "/",1);
+  listDir("/", 1);
   lastBoot.deleteConfig(LAST_BOOT_CONF);
   conf.deleteConfig(CONF_FILE);
 }
