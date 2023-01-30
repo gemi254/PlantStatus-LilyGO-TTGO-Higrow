@@ -1,10 +1,7 @@
-#define DEBUG_MQTT    //Uncomment to serial print DBG messages
+//#define DEBUG_MQTT    //Uncomment to serial print DBG messages
 #if defined(DEBUG_MQTT)
   #undef LOG_DBG
   #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
-#else
-  void printfNull(const char *format, ...) {}
-  #define LOG_DBG(format, ...) printfNull(DBG_FORMAT(format), ##__VA_ARGS__)
 #endif
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -111,13 +108,6 @@ String getJsonBuff(){
   plant["chipId"] = chipID;
   plant["time"] = data.time;
   plant["batChargeDate"] = data.batChargeDate;
-  plant["bootCount"] = data.bootCnt;
-  plant["bootCountError"] = data.bootCntError;    
-  plant["sleepReason"] = data.sleepReason;
-  plant["batPerc"] = truncate(data.batPerc, 0);
-  plant["batDays"] = truncate(data.batDays, 1);
-  plant["batVolt"] = truncate( voltAvg, 2);
-  plant["batLastVolt"] = truncate( atof(lastBoot["bat_voltage"].c_str()),1);
   plant["lux"] = truncate(data.lux + atof(conf["offs_lux"].c_str()), 2); 
   plant["temp"] = truncate(data.temp + atof(conf["offs_temp"].c_str()), 2);
   plant["humid"] = truncate(data.humid + atof(conf["offs_humid"].c_str()), 2);
@@ -128,7 +118,14 @@ String getJsonBuff(){
   // plant["saltadvice"] = config.saltadvice;
   // plant["plantValveNo"] = plantValveNo; 
   // plant["wifissid"] = WiFi.SSID();
+  plant["bootCount"] = data.bootCnt;
+  plant["bootCountError"] = data.bootCntError;    
+  plant["sleepReason"] = data.sleepReason;
+  plant["batPerc"] = truncate(data.batPerc, 0);
+  plant["batDays"] = truncate(data.batDays, 1);
+  plant["batVolt"] = truncate( voltAvg, 2);
   plant["onPower"] = onPower;
+  plant["batLastVolt"] = truncate( atof(lastBoot["bat_voltage"].c_str()),1);
   plant["loopMillis"] = millis() - appStart;
   plant["RSSI"] = WiFi.RSSI(); //wifiRSSI;
   
@@ -171,7 +168,7 @@ void publishSensors(const SensorData &data) {
   String jsonBuff = getJsonBuff();
   
   LOG_DBG("Sending message to topic: %s\n",topic);  
-  
+  #if not defined(DEBUG_MQTT)
   bool retained = true;  
   if (mqttClient.publish(topic, jsonBuff.c_str(), retained)) {
     LOG_DBG("Message published\n");
@@ -179,5 +176,6 @@ void publishSensors(const SensorData &data) {
     LOG_ERR("Error in Message, not published\n");
     goToDeepSleep("mqttPublishFailed");
   }    
+  #endif
 }
 
