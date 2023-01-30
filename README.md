@@ -1,5 +1,9 @@
-# Plant Status with LilyGO TTGO T-HiGrow
-## TTGO T-HIGrow 
+## Plant Status
+Plant Status is a plant monitoring and logging application using <a target="_blank" title="Garden Flowers Temperature Moisture Sensor WiFi Bluetooth Wireless Control Meter" href="https://pt.aliexpress.com/item/32815782900.html">**LILYGO TTGO-T-HIGrow**</a> sensor.
+Application supports both **DHT** sensors (DHT11,DHT12,DHT22) or the new **BME280** sensor, the **BH1750** light sensor, 
+and the internal **soil moisture** and **soild salt** sensor.
+
+## Main features
 + Configure parameters using an **access point** and **config portal** on startup.
 + Publish sensor values in a **mqtt broker**.
 + **Homeassistant** integration using MQTT **autodiscovery** interface.
