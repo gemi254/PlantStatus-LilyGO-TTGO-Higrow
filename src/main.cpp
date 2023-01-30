@@ -24,7 +24,8 @@
 #include "SPIFFS.h"
 #include <ESPmDNS.h>
 
-#define APP_VER "1.0.0"  // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
+#define APP_VER "1.0.1"   // Added log sensors to a daily csv file, View the log from main page.
+//#define APP_VER "1.0.0" // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
 
 #define LED_PIN 13
 #define I2C_SDA 25
