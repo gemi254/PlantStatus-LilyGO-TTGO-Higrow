@@ -47,8 +47,8 @@ const char* appConfigDict_json PROGMEM = R"~(
 "seperator": "Device settings"
 },{
      "name": "host_name",
-    "label": "Name your device",
-  "default": "T-HIGROW"
+    "label": "Name your device. {mac} will be replaced with WiFi mac id",
+  "default": "T-HIGROW_{mac}"
 },{
      "name": "plant_name",
     "label": "Name your plant",
