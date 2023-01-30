@@ -1,6 +1,7 @@
 # Plant Status with LilyGO TTGO T-HiGrow
 ## TTGO T-HIGrow 
 + Configure parameters using an **access point** and **config portal** on startup.
++ Publish sensor values in a **mqtt broker**.
 + **Homeassistant** integration using MQTT **autodiscovery** interface.
 + **Log** measurements in a dailly **csv file** stored in SPIFFS. View the file in browser.
 + User button single Press -> Take measurement
