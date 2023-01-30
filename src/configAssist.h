@@ -1,8 +1,8 @@
-#define APP_VERSION "1.2"            // Class version
+#define CLASS_VERSION "1.2"          // Class version
 #define MAX_PARAMS 50                // Maximum parameters to handle
 #define DELIM '~'                    // Ini file pairs seperator
 #define CONF_FILE "/config.ini"      // Ini file to save configuration
-#define DONT_ALLOW_SPACES false       // Allow spaces in var names ?
+#define DONT_ALLOW_SPACES false      // Allow spaces in var names ?
 #define HOSTNAME_KEY "host_name"     // The key that defines host name
 
 // Define Platform libs
