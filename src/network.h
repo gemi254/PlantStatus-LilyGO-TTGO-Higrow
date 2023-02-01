@@ -132,6 +132,80 @@ button:hover {
 }
 </style>
 </head>
+<script>
+/*********** WebSockets functions ***********/
+const wsServer = "ws://" + document.location.host + ":81/";
+let ws = null;
+let hbTimer = null;
+let refreshInterval = 5000;
+document.addEventListener('DOMContentLoaded', initWebSocket());
+
+// define websocket handling
+function initWebSocket() {  
+  console.log("Connect to: " + wsServer);
+  ws = new WebSocket(wsServer);
+  ws.onopen = onOpen;
+  ws.onclose = onClose;
+  ws.onmessage = onMessage; 
+  ws.onerror = onError;
+}
+function sendCmd(reqStr) {
+  ws.send(reqStr);
+  console.log("Cmd: " + reqStr);
+}
+
+// periodically check that connection is still up and get status
+function heartbeat() {
+  if (!ws) return;
+  if (ws.readyState !== 1) return;
+  sendCmd("H");
+  clearTimeout(hbTimer);
+  hbTimer = setTimeout(heartbeat, refreshInterval);
+}
+
+// connect to websocket server
+function onOpen(event) {
+  console.log("Connected");
+  //heartbeat();
+}
+
+// process received WS message
+function onMessage(messageEvent) {
+  if (messageEvent.data.startsWith("{")) {
+    // json data
+    updateData = JSON.parse(messageEvent.data);
+    updateTable(updateData); // format received config json into html table
+  } else {
+    console.log(messageEvent.data);
+  }
+
+  if(hbTimer){
+    clearTimeout(hbTimer);
+    hbTimer = setTimeout(heartbeat, refreshInterval);
+  }
+}
+
+function updateTable(configData){
+  Object.entries(configData).forEach(([key, value]) => {
+    const td = document.getElementById(key)
+    if(td) td.innerHTML = value;
+  });
+}
+
+function onError(event) {
+  console.log("WS Error: " + event.code);
+}
+
+function onClose(event) {
+  console.log("Disconnected: " + event.code + ' - ' + event.reason);
+  ws = null;
+  // event.codes:
+  //   1006 if server not available, or another web page is already open
+  //   1005 if closed from app
+  if (event.code == 1006) {} //alert("Closed websocket as a newer connection was made, refresh browser page");
+  else if (event.code != 1005) initWebSocket(); // retry if any other reason
+}
+</script>        
 <body>
 <center>
     <div class="w-100">
@@ -143,10 +217,10 @@ button:hover {
 )=====";
 // Template for one line
 PROGMEM const char HTML_PAGE_DEF_LINE[] = R"=====(
-  <tr>
-    <td scope="row" class="pair-key">{key}</td>
-    <td class="pair-val">{val}</td>    
-  </tr>    
+        <tr>
+          <td scope="row" class="pair-key">{key}</td>
+          <td class="pair-val" id="{key}">{val}</td>    
+        </tr>    
 )=====";
 
 // Template for page end
@@ -222,14 +296,14 @@ void connectToNetwork(){
   }
 }
 
-// Mqtt function forward definition
+// Functions forward definition
 String getJsonBuff();
 void mqttSetupDevice(String chipId);
 
 // Handler function for root of the web page 
 static void handleRoot(){
   //Read on each refresh
-  readSensors();
+  //readSensors();
 
   String jsonBuff = getJsonBuff();
   DeserializationError error;
@@ -273,7 +347,7 @@ static void handleRoot(){
 }
 
 //Show a text file in browser window
-static void handleViewFile(String fileName){
+static void handleViewFile(String fileName, bool download=false){
   File f = STORAGE.open(fileName.c_str());
   if (!f) {
     f.close();
@@ -282,6 +356,20 @@ static void handleViewFile(String fileName){
     pServer->send(200, "text/html", resp_str);
     pServer->client().flush(); 
     return;  
+  }
+  if (download) {  
+    // download file as attachment, required file name in inFileName
+    LOG_INF("Download file: %s, size: %0.1fMB", fileName.c_str(), (float)(f.size()/ONEMEG));
+    pServer->sendHeader("Content-Type", "text/text");
+    pServer->sendHeader("Content-Disposition", "attachment; filename=" + fileName);
+    pServer->sendHeader("Content-Length", String(f.size()));
+    pServer->sendHeader("Connection", "close");
+    size_t sz = pServer->streamFile(f, "application/octet-stream");
+    if (sz != f.size()) {
+      LOG_ERR("File: %s, Sent %lu, expected: %lu!\n", fileName.c_str(), sz, f.size()); 
+    } 
+    f.close();
+    return;
   }
 
   LOG_INF("View file: %s, size: %0.1fMB\n", fileName.c_str(), (float)(f.size()/(ONEMEG)));
@@ -294,7 +382,6 @@ static void handleViewFile(String fileName){
   } while (chunksize != 0);
   f.close();
   pServer->client().flush(); 
-
 }
 
 // Handler function for commands from the main web page
@@ -305,26 +392,32 @@ static void handleCmd(){
     String out(HTML_PAGE_MESSAGE);
     out.replace("{url}", "/");
     out.replace("{refresh}", "3000");
-    
-    if(pServer->argName(i)=="hasDiscovery"){
-      mqttSetupDevice(getChipID()); 
-      out.replace("{msg}", "Sended mqtt homeassistant device discovery");
-      out.replace("{title}", "Homeassistant discovery");
-      pServer->send(200, "text/html", out);
-      pServer->client().flush(); 
-      return;
-
-    }else if(pServer->argName(i)=="view"){
+    String cmd(pServer->argName(i));    
+    if(cmd=="view"){
       String file(pServer->arg(i));
       if(file=="") file = getLogFileName(false);
       handleViewFile(file);
-      pServer->sendContent("\n\nFile: " + file );
-      //pServer->sendContent(HTML_PING_SCRIPT);
-      pServer->client().flush(); 
-      
+      pServer->sendContent("\n\nFile: " + file );      
+      pServer->client().flush();
       return;
-
-    }else if(pServer->argName(i)=="del"){
+    }else if(cmd=="download"){
+      String file(pServer->arg(i));
+      if(file=="") file = getLogFileName(false);
+      handleViewFile(file, true);
+      return;
+   }else if(cmd=="reboot"){
+      out.replace("{msg}", "Rebooting ESP..<br>Please wait");
+      out.replace("{title}", "Reboot");
+      pServer->send(200, "text/html", out);
+      pServer->client().flush(); 
+      delay(1000);
+      ESP.restart();
+      return;
+    }else if(cmd=="hasDiscovery"){
+      mqttSetupDevice(getChipID()); 
+      out.replace("{msg}", "Sended mqtt homeassistant device discovery");
+      out.replace("{title}", "Homeassistant discovery");
+    }else if(cmd=="del"){
       String file(pServer->arg(i));
       if(STORAGE.remove(file.c_str())){
         out.replace("{msg}", "Deleted file: " + file);
@@ -332,38 +425,23 @@ static void handleCmd(){
         out.replace("{msg}", "Failed to delete file: " + file);
       }
       out.replace("{title}", "Delete");
-      pServer->send(200, "text/html", out);
-      pServer->client().flush(); 
-      return;
-
-   }else if(pServer->argName(i)=="reboot"){
-      out.replace("{msg}", "Rebooting ESP..<br>Please wait");
-      out.replace("{title}", "Reboot");
-      pServer->send(200, "text/html", out);
-      pServer->client().flush(); 
-      delay(1000);
-      ESP.restart();
-      return;      
-
-    }else if(pServer->argName(i)=="reset"){
+   }else if(cmd=="reset"){
       out.replace("{msg}", "Deleting ini files..<br>Please wait");
       out.replace("{title}", "Reboot");
-      pServer->send(200, "text/html", out);
-      pServer->client().flush(); 
       reset();
-      return;      
     }
-
+    pServer->send(200, "text/html", out);
   } 
   pServer->send(200, "text/html", "");
+  pServer->client().flush(); 
   ResetCountdownTimer();
 }
+
 // Handler function for ping from the web page to avoid sleep
 static void handlePing(){
   pServer->send(200, "text/html", "");
   ResetCountdownTimer();
 }
-
 
 // Handler function for AP config form
 static void handleAssistRoot() { 
@@ -372,17 +450,49 @@ static void handleAssistRoot() {
   pServer->sendContent(String(HTML_PING_SCRIPT));
 }
 
-// Start the web server
-void startWebSever(){
-  if(pServer) return;
-  if (MDNS.begin(conf["host_name"].c_str()))  LOG_INF("MDNS responder Started\n");
-  pServer = new WebServer(80);
-  pServer->begin();
-  pServer->on("/", handleRoot);
-  pServer->on("/cmd", handleCmd);
-  pServer->on("/cfg", handleAssistRoot);
-  pServer->on("/pg", handlePing);
-  LOG_INF("Started web server at port: 80\n");
+// Websockets handler
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+    switch(type) {
+        case WStype_DISCONNECTED:
+            LOG_INF("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED:
+            {
+              IPAddress ip = pWebSocket->remoteIP(num);
+              LOG_INF("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+
+              // send message to client
+              pWebSocket->sendTXT(num, "Connected");
+            }
+            break;
+        case WStype_TEXT:
+            LOG_INF("[%u] get Text: %s\n", num, payload);
+            ResetCountdownTimer();
+            // send message to client
+            // webSocket.sendTXT(num, "message here");
+
+            // send data to all connected clients
+            // webSocket.broadcastTXT("message here");
+            break;
+        case WStype_BIN:
+            LOG_INF("[%u] get binary length: %u\n", num, length);
+            // send message to client
+            // webSocket.sendBIN(num, payload, length);
+            break;
+		case WStype_ERROR:			
+		case WStype_FRAGMENT_TEXT_START:
+		case WStype_FRAGMENT_BIN_START:
+		case WStype_FRAGMENT:
+		case WStype_FRAGMENT_FIN:
+			break;
+    }
+}
+
+//Send sensor readings to socket
+void wsSendSensors(){
+  if(!pWebSocket) return;
+  String jsonBuff = getJsonBuff();
+  pWebSocket->broadcastTXT(jsonBuff);
 }
 
 // Is a web server client connected (AP or SP)?
@@ -399,6 +509,23 @@ bool isClientConnected(WEB_SERVER *pServer){
   if(myclient && myclient.connected()){
     LOG_INF("Connected, ST client\n");
     return true;
-  }  
+  }
   return false;
+}
+// Start the web server
+void startWebSever(){
+  if(pServer) return;
+  if (MDNS.begin(conf["host_name"].c_str()))  
+    LOG_INF("MDNS responder Started\n");
+  pServer = new WebServer(80);
+  pServer->begin();
+  pServer->on("/", handleRoot);
+  pServer->on("/cmd", handleCmd);
+  pServer->on("/cfg", handleAssistRoot);
+  pServer->on("/pg", handlePing);  
+  LOG_INF("Started web server at port: 80\n");
+  pWebSocket = new WebSocketsServer(81);
+  pWebSocket->begin();
+  pWebSocket->onEvent(webSocketEvent);
+  LOG_INF("Started web sockets at port: 81\n");  
 }
