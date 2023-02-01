@@ -1,5 +1,4 @@
-void goToDeepSleep(const char *reason, bool error=true)
-{
+void clearMqttRetainMsg(){
   //Reset retained
   if(clearMqttRetain){
     LOG_INF("Clear mqtt retaining msgs\n");
@@ -8,6 +7,11 @@ void goToDeepSleep(const char *reason, bool error=true)
     delay(1000);
     clearMqttRetain = false;
   } 
+}
+// Enter deep sleep
+void goToDeepSleep(const char *reason, bool error=true)
+{
+  clearMqttRetainMsg();
 
   mqttClient.disconnect();
   
