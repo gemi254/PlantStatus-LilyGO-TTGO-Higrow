@@ -94,7 +94,7 @@ void logSensors(){
   String line = "";
   if(!STORAGE.exists(fullPath)){
     LOG_DBG("New log file: %s\n", fullPath.c_str());
-    line += "DateTime" + sep + sep;
+    line += "DateTime      " + sep;
     line += "temp" + sep;
     line += "humid" + sep;
     line += "pressr" + sep;
@@ -173,6 +173,7 @@ void readSensors(){
   
   //Append to log
   logSensors();
+
   //Next auto reading reset
   sensorReadMs = millis();
 }
