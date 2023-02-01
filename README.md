@@ -11,43 +11,53 @@ and the internal **soil moisture** and **soil salt** sensor.
 + **Sensors offsets** for device calibration.
 + User button single Press -> Take measurement.
 + User button long Press -> Connect to network and show a **web page with measurements** on mobile phone.
-+ **Websockets** to auto update sensor values in web page (No refresh).
++ **Websockets** to auto update sensor values in home page (No refresh).
 + **Auto sleep** after no activity.
 + Battery optimization.
 + Mqtt wakeup function and remote configure functions.
 + No need to compile for each device.
 
 ## Install
-You can compile project using **platformio** or you can download the compiled firmware from **/firmware** folder 
-and upload to you device using **esptool.py** with command..
+Compile the project using **platformio** or you can download the already compiled firmware from **/firmware** folder 
+and upload it to you device using **esptool.py** with command..
 
 esptool.py --port COM5 write_flash -fs 1MB -fm dout 0x0 PlantStatus.bin
 
 ## Usage
-On first boot **Plant Status** will create an access point named **T-HIGROW** and wait for a client connection. Use your mobile phone 
-to connect and navigate your browser to **192.168.4.1** to enter device **setup portal**. 
-Edit application variables and after making necessary changes press the `Save button` to save settings to spiffs.
+On first boot **Plant Status** will create an access point named **T-HIGROW_{mac_id}** and wait for a client connection. Use your mobile phone 
+to connect and navigate your browser to **192.168.4.1** to enter device **setup portal**.
 
-Reboot your device by pressing `Reboot` button and on next loop device will wake up, take a measurement, publish it to mqtt and enter deep sleep again.
-During sleep if you press the **user button** once, device will wake, publish measurements and enter deep sleep again.
+Application variables can be edited in configuration portal and after making changes using the `Save` button they will be saved to an ini text file to spiffs.
 
-If you press **user button** for long time (>5 sec) device will wake up, publish measurements, start web server and wait 30 seconds 
-for a connection from a web browser. Navigate you browser to device ip and see the live measurements.
+Reboot the device by pressing `Reboot` button. On next loop device will wake up, take a measurement, publish it to mqtt and enter deep sleep again.
+During sleep, pressing the **user button** once, will make the device wake up, publish measurements and enter deep sleep again.
 
-To reconfigure your device press `configure` button end redirect to configure page. 
-If you Auto **Home Assistant** discovery press the`HAS discovery` button and a mqtt auto discovery message will be send to Home assistant. 
-Visit HAS devices page to see the new **T-HIGROW** MQTT device.
+Pressing the **user button** for long time (>5 sec) will make device to wake up, publish measurements, start a web server and wait 30 seconds 
+for a connection from a web browser. Connect and navigate you browser to device ip to see the live measurements. Measurements are 
+updated automatically every 30 secs at home page.
 
-You can view active daily log file by button `Log` in main page. You can view an old history file with command ..
+To **re-configure** device press `configure` button from homepage end redirect to configuration page. 
 
-`http://192.168.4.1/cmd?view=/data/2023-01/2023-01-30.csv` 
+To make device visible in **Home Assistant** press the`HAS discovery` button from home page. A mqtt **auto discovery** messages will be send to Home assistant
+to configure **Plant Status** as a mqtt device. Visit **HAS devices** page to see the new **T-HIGROW** MQTT device.
+
+**Active** daily log file can be viewed in the browser by button `Log` in home page. And old history file can be viewed with command ..
+
+`http://192.168.4.1/cmd?view=/data/2023-01/2023-01-30.csv`
+
+An old log file can be donwloaded with comand..
+
+`http://192.168.4.1/download?view=/data/2023-01/2023-01-30.csv`
 
 *(replace dates as needed)*
 
 You can send remote configuration data via retained messages from a mosquitto broker. Messages will be delivered on next reboot,
 alter the configuration and saved to SPIFFS
 
-Fom a mqtt broker server publish the command with the parameter you want to change
+Fom a mqtt broker server publish the command with the parameter you want to change.
+Valid parameters names with default values are defined in
+
+`include/user-variables.h`  line: 27 const char* appConfigDict_json 
 
 ``mosquitto_pub -r -h {mqtt_host} -u {mqtt_user} -P {mqtt_pass} -t "homeassistant/sensor/{host_name}-{macid}/config" -m "offs_pressure=-2.42"``
  
