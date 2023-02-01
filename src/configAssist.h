@@ -15,7 +15,7 @@
 #endif
 
 // LOG shortcuts
-#define DEBUG_CONFIG_ASSIST    //Uncomment to serial print DBG messages
+//#define DEBUG_CONFIG_ASSIST    //Uncomment to serial print DBG messages
 #ifdef ESP32
   #define LOG_NO_COLOR
   #define LOG_COLOR_DBG
