@@ -1,20 +1,47 @@
-//#define DEBUG_MQTT    //Uncomment to serial print DBG messages
+//Uncomment to serial print DBG messages rather than publish
+//#define DEBUG_MQTT    
 #if defined(DEBUG_MQTT)
   #undef LOG_DBG
   #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
 #endif
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  if(length==0) return;
   String msg="";
   for (int i = 0; i < length; i++) {
     msg+= ((char)payload[i]);
   }  
   clearMqttRetain = true;
   LOG_INF("Mqtt rcv topic: %s, msg: %s\n", topic, msg.c_str());
-  //Don't sleep
-  ResetCountdownTimer();
-  //Start web server if needed
-  startWebSever();
+  //Messages as 'cmd=val'
+  char *token = NULL;
+  char seps[] = "=";
+  token = strtok(&msg[0], seps);
+  if(token==NULL){
+    LOG_ERR("Unknown msg: %s \n", msg.c_str());
+    return;
+  }
+  String key(token);
+  
+  token = strtok( NULL, seps );
+  if(token==NULL){
+    LOG_ERR("Unknown msg: %s \n", msg.c_str());
+    return;
+  }
+  String val(token);
+
+  LOG_DBG("Exec key: %s val: %s\n",key.c_str(),val.c_str());
+  if(key=="sleep"){
+    if(val=="0"){
+      //Don't sleep
+      ResetCountdownTimer();
+      //Start web server if needed
+      startWebSever();
+    }
+  }else{    
+    conf.put(key, val);
+    conf.saveConfigFile(CONF_FILE);
+  }  
 }
 
 void mqttSetup(String identyfikator, String chipId, String uom = "x", String dc = "x" )
@@ -167,15 +194,15 @@ void publishSensors(const SensorData &data) {
 
   String jsonBuff = getJsonBuff();
   
-  LOG_DBG("Sending message to topic: %s\n",topic);  
+  LOG_DBG("Sending message to topic: %s\n",topic);
   #if not defined(DEBUG_MQTT)
-  bool retained = true;  
-  if (mqttClient.publish(topic, jsonBuff.c_str(), retained)) {
-    LOG_DBG("Message published\n");
-  } else {
-    LOG_ERR("Error in Message, not published\n");
-    goToDeepSleep("mqttPublishFailed");
-  }    
+    bool retained = true;  
+    if (mqttClient.publish(topic, jsonBuff.c_str(), retained)) {
+      LOG_DBG("Message published\n");
+    } else {
+      LOG_ERR("Error in Message, not published\n");
+      goToDeepSleep("mqttPublishFailed");
+    }    
   #endif
 }
 
