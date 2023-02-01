@@ -20,11 +20,14 @@
 #include "user-variables.h"
 #include <18B20_class.h>
 #include <Adafruit_BME280.h>
+#include <WiFiClientSecure.h>
+#include <WebSocketsServer.h>
 #include <WebServer.h>
 #include "SPIFFS.h"
 #include <ESPmDNS.h>
 
-#define APP_VER "1.0.1"   // Added log sensors to a daily csv file, View the log from main page.
+#define APP_VER "1.0.2"   // Websockets to update, mqtt command to remote setup.
+//#define APP_VER "1.0.1" // Added log sensors to a daily csv file, View the log from main page.
 //#define APP_VER "1.0.0" // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
 
 #define LED_PIN 13
@@ -75,6 +78,7 @@ uint16_t adcVolt = 0;
 unsigned long sleepTimerCountdown = 3000; //Going to sleep timer
 unsigned long sensorReadMs = millis() + SENSORS_READ_INTERVAL;    //Sensors read inteval
 unsigned long sleepCheckMs = millis();    //Check for sleep interval
+unsigned long btPressMs = 0;              //Button pressed ms
 // Bool vars
 bool bmeFound = false;
 bool dhtFound = false;
@@ -102,6 +106,7 @@ Adafruit_BME280 *pBmp = NULL;     //0x77
 DHT *pDht=NULL;
 DS18B20 *pTemp18B20 = NULL;
 WebServer *pServer = NULL;
+WebSocketsServer *pWebSocket = NULL;
 
 #ifdef USE_18B20_TEMP_SENSOR 
   DS18B20 temp18B20(DS18B20_PIN);
@@ -124,7 +129,6 @@ ConfigAssist lastBoot;           //Save last boot vars
 // Application setup function 
 void setup()
 {
-
   appStart = millis(); //Application start time
   chipID = getChipID();
   //User button check at startup  
@@ -191,23 +195,28 @@ void setup()
 void loop(){
   mqttClient.loop();
   if(pServer) pServer->handleClient();
-
+  if(pWebSocket) pWebSocket->loop();
   //Read and publish sensors  
   if (millis() - sensorReadMs >= SENSORS_READ_INTERVAL){
     //Read sensor values,
     readSensors();    
-    //Create the JSON and publish to mqtt
+  
+    //Send measurement to web sockets to update page
+    wsSendSensors();
+
+    //Publish JSON to mqtt
     publishSensors(data);
   
     //Remember last volt
     lastBoot.put("bat_voltage", String(data.batVolt)); 
     
     //Remember last boot vars?
-    lastBoot.saveConfigFile(LAST_BOOT_CONF);
+    //lastBoot.saveConfigFile(LAST_BOOT_CONF);
 
     data.sleepReason = "noSleep";
     
     //Read battery status
+    delay(100);
     adcVolt = analogRead(BAT_ADC); 
     
     //Reset loop millis
@@ -219,7 +228,7 @@ void loop(){
   if (millis() - sleepCheckMs >= SLEEP_CHECK_INTERVAL){
     //Count down
     sleepTimerCountdown = (sleepTimerCountdown > SLEEP_CHECK_INTERVAL) ? (sleepTimerCountdown -= SLEEP_CHECK_INTERVAL) : 0L;
-    LOG_INF("Sleep count down: %lu\n", sleepTimerCountdown);
+    LOG_INF("Sleep count down: %lu, %x\n", sleepTimerCountdown, pServer);
 
     if(isClientConnected(pServer)){
       LOG_DBG("No sleep, clients connected\n");
@@ -236,12 +245,16 @@ void loop(){
   //Check user button
   btState = !digitalRead(USER_BUTTON);
   if(btState){
+    btPressMs = millis();
     btPress = true;
     ResetCountdownTimer();
   }else if(btPress){ //Was pressed and released
     //Update sensors 
     sensorReadMs = millis() + SENSORS_READ_INTERVAL;
     btPress = false;
+    LOG_DBG("Button press for: %lu\n", millis() - btPressMs);
   }
+  //Clear retained?
+  clearMqttRetainMsg();
   delay(5);
 }
