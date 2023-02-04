@@ -4,7 +4,7 @@
   #undef LOG_DBG
   #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
 #endif
-
+//Mqtt retain commands received
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if(length==0) return;
   String msg="";
@@ -13,6 +13,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }  
   clearMqttRetain = true;
   LOG_INF("Mqtt rcv topic: %s, msg: %s\n", topic, msg.c_str());
+  
   //Messages as 'cmd=val'
   char *token = NULL;
   char seps[] = "=";
@@ -29,21 +30,76 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     return;
   }
   String val(token);
-
-  LOG_DBG("Exec key: %s val: %s\n",key.c_str(),val.c_str());
+  key.trim();
+  val.trim();
+  LOG_DBG("Exec set key: %s=%s\n", key.c_str(), val.c_str());
   if(key=="sleep"){
     if(val=="0"){
-      //Don't sleep
+      //Don't sleep. Wait for connection
       ResetCountdownTimer();
       //Start web server if needed
       startWebSever();
     }
-  }else{    
-    conf.put(key, val);
+  }else{
+    //Increasments, offs+=1, offs-=1.5
+    if(key.endsWith("+") || key.endsWith("-")){
+      char sign='+';
+      if(key.endsWith("-")) sign = '-';
+        key.remove(key.length() - 1);
+        key.trim();
+        if(!conf.exists(key)){
+          LOG_ERR("Key: %s not exists \n", key.c_str());
+          return;
+        }
+
+        String kval = conf[key];        
+        if(!isNumeric(kval)){
+          LOG_ERR("Non numeric: %s\n", kval.c_str());
+          return;
+        }
+        //LOG_DBG("Inc key: int:%d, %d\n", isInt(kval.c_str()), isInt(val.c_str()));
+        //Int
+        if(isInt(kval.c_str()) && isInt(val.c_str()) ){
+          int i = kval.toInt();
+          int inc = val.toInt();
+          int n=0;
+          if(sign=='-') n = i - inc;
+          else n = i + inc;
+          LOG_DBG("Key[%s] inc int: %i %c %i = %i\n", key.c_str(), i, sign, inc, n);
+          conf.put(key, String(n) );
+        //Float
+        }else if(isFloat(kval.c_str()) && isFloat(val.c_str()) ){  
+          float v = atof(kval.c_str());
+          float inc = atof(val.c_str());
+          float n;
+          if(sign=='-') n = v - inc;
+          else n = v + inc;
+          LOG_DBG("Key[%s] float: %3.2f %c %3.2f = %3.2f\n", key.c_str(), v, sign, inc, n);
+          conf.put(key, String(n) );
+        }else{
+          //String ? //conf.put(key, conf[key].c_str() + val );
+          LOG_ERR("Key %s is not Numeric\n", key.c_str() );
+          return;
+        }
+    }else{
+      conf.put(key, val);
+      LOG_DBG("Update key: %s=%s\n", key.c_str(), val.c_str());
+    }
     conf.saveConfigFile(CONF_FILE);
   }  
 }
 
+// Reset retained messages recv
+void clearMqttRetainMsg(){
+  if(clearMqttRetain){
+    LOG_INF("Clear mqtt retaining msgs\n");
+    mqttClient.publish(topicConfig.c_str(), "", true);
+    mqttClient.loop();
+    //delay(1000);
+    clearMqttRetain = false;
+  } 
+}
+//Send mqtt autodiscovery messages
 void mqttSetup(String identyfikator, String chipId, String uom = "x", String dc = "x" )
 {
   const String topicStr_c = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipId + "/" + identyfikator +"/config";
@@ -103,14 +159,14 @@ void mqttSetupDevice(String chipId){
     //https://www.home-assistant.io/integrations/sensor/#device-class
     //Home Assitant MQTT Autodiscovery messages
     Serial.println("Setting homeassistant mqtt device..");
-    mqttSetup("batPerc",        chipId, "%",  "battery");
-    mqttSetup("batDays",        chipId, "x",  "duration");
-    mqttSetup("batVolt",        chipId, "V",  "voltage");
     mqttSetup("lux",            chipId, "lx", "illuminance");
     mqttSetup("humid",          chipId, "%",  "humidity");
     mqttSetup("soil",           chipId, "%",  "humidity");
     mqttSetup("salt",           chipId, "x");
     mqttSetup("temp",           chipId, "°C", "temperature");
+    mqttSetup("batPerc",        chipId, "%",  "battery");
+    mqttSetup("batDays",        chipId, "x",  "duration");
+    mqttSetup("batVolt",        chipId, "V",  "voltage");
     mqttSetup("RSSI",           chipId, "dBm", "signal_strength");
 }
 //Receive mqtt config commands
@@ -175,10 +231,10 @@ void publishSensors(const SensorData &data) {
   int port =  conf["mqtt_port"].toInt();
 
   //Connect to mqtt broker
-  LOG_INF("Connecting to the MQTT broker: %s:%i \n", broker, port);
+  LOG_INF("Connecting to MQTT broker: %s:%i \n", broker, port);
   mqttClient.setServer(broker.c_str(), port);
   if (!mqttClient.connect(broker.c_str(), conf["mqtt_user"].c_str(), conf["mqtt_pass"].c_str())) {
-    LOG_ERR("Connect to the MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
+    LOG_ERR("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
     goToDeepSleep("mqttConnectFail");
   }else{
     LOG_DBG("Connected to MQTT!\n");
