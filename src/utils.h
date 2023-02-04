@@ -1,3 +1,4 @@
+
 // Needs to be a time zone string from: https://raw.githubusercontent.com/nayarsystems/posix_tz_db/master/zones.csv
 time_t getEpoch() {
   struct timeval tv;
@@ -89,6 +90,42 @@ String getSaltAdvice(uint32_t salt){
   else if (salt < 351)   advice = "optimal";
   else if (salt > 350)   advice = "too high";  
   return advice;
+}
+bool isNumeric(String s){ //1.0, -.232, .233, -32.32
+  unsigned int l = s.length();
+  if(l==0) return false;
+  bool dec=false, sign=false;
+  for(unsigned int i = 0; i < l; ++i) {
+    if (s.charAt(i) == '.'){
+      if(dec) return false;
+      else dec = true;
+    }else if(s.charAt(i) == '+' || s.charAt(i) == '-' ){
+      if(sign) return false;
+      else sign = true;
+    }else if (!isDigit(s.charAt(i))){
+      LOG_INF("%c\n", s.charAt(i));
+      return false;
+    }
+  }
+  return true;
+}
+bool isFloat(const std::string& str)
+{
+    if (str.empty())
+        return false;
+
+    char* ptr;
+    strtof(str.c_str(), &ptr);
+    return (*ptr) == '\0';
+}
+bool isInt(const std::string& str)
+{
+    if (str.empty())
+        return false;
+
+    char* ptr;
+    strtol(str.c_str(), &ptr,10);
+    return (*ptr) == '\0';
 }
 // Truncate a float value
 float truncate(float val, byte dec){
