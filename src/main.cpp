@@ -125,7 +125,6 @@ ConfigAssist lastBoot;           //Save last boot vars
 #include <network.h>
 #include <mqtt.h>
 
-
 // Application setup function 
 void setup()
 {
@@ -152,7 +151,7 @@ void setup()
   if (!SPIFFS.begin(true)){
     LOG_ERR("Error mounting SPIFFS\n");
   }
-
+  //listDir("/", 3);
   //reset();
 
   int resetReason = rtc_get_reset_reason(0);
