@@ -13,7 +13,7 @@ void initSensors(){
   }else{
       bool wireOk = Wire.begin(I2C_SDA, I2C_SCL); // wire can not be initialized at beginng, the bus is busy
       if (wireOk){
-        LOG_DBG("Wire begin ok\n");
+        LOG_INF("Wire begin ok\n");
         pBmp = new Adafruit_BME280();
         if (!pBmp->begin()){
           LOG_ERR("Could not find a valid BMP280 sensor, check wiring!");
@@ -94,7 +94,7 @@ void logSensors(){
   String line = "";
   if(!STORAGE.exists(fullPath)){
     LOG_DBG("New log file: %s\n", fullPath.c_str());
-    line += "DateTime      " + sep;
+    line += "DateTime               " + sep;
     line += "temp" + sep;
     line += "humid" + sep;
     line += "pressr" + sep;
