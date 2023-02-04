@@ -51,13 +51,14 @@ An old log file can be donwloaded with comand..
 
 *(replace dates as needed)*
 
-You can send remote configuration data via retained messages from a mosquitto broker. Messages will be delivered on next reboot,
-alter the configuration and saved to SPIFFS
+Remote configuration commands can be send as retained messages from a mosquitto broker. Messages will be delivered on next reboot,
+alter the configuration and save to SPIFFS to be loaded on next reboot. Commands can be ``variable``=``val`` in order to set 
+a variable to a value, or ``variable``+=``val`` to increase or decrease value.
+Valid parameters names with default values are defined in `include/user-variables.h`  line: 27 const char* appConfigDict_json 
 
-Fom a mqtt broker server publish the command with the parameter you want to change.
-Valid parameters names with default values are defined in
+Fom example from a mqtt broker server publish the command with the parameter you want to change..
 
-`include/user-variables.h`  line: 27 const char* appConfigDict_json 
+`"offs_pressure=-2.42"` or `"offs_pressure-=.02"`
 
 ``mosquitto_pub -r -h {mqtt_host} -u {mqtt_user} -P {mqtt_pass} -t "homeassistant/sensor/{host_name}-{macid}/config" -m "offs_pressure=-2.42"``
  
