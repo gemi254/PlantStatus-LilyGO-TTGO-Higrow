@@ -7,7 +7,7 @@ PROGMEM const char HTML_PAGE_DEF_START[] = R"=====(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sensors of {appName}</title>
+<title>Sensors of {host_name}</title>
 <style>
 :root {
  --bg-table-stripe: #f6f6f5;
@@ -185,10 +185,28 @@ function onMessage(messageEvent) {
   }
 }
 
+function valueUnits(key){
+  if(key=="lux"){
+    return " lx";
+  }else if(key=="temp"){
+    return " °C";
+  }else if(key=="humid" || key=="batPerc"){
+    return " %";
+  }else if(key=="pressure"){
+    return " hPa";
+  }else if(key=="RSSI"){
+    return " dBm";    
+  }else if(key=="batVolt"){
+    return " Volt";    
+  }else if(key=="batDays"){
+    return " days";    
+  }
+  return "";
+}
 function updateTable(configData){
   Object.entries(configData).forEach(([key, value]) => {
     const td = document.getElementById(key)
-    if(td) td.innerHTML = value;
+    if(td) td.innerHTML = value + valueUnits(key);
   });
 }
 
@@ -211,7 +229,7 @@ function onClose(event) {
     <div class="w-100">
       <table>
         <caption>
-          <h3>{appName} status</h3>
+          <h3>{host_name} status</h3>
         </caption>
         <tbody>
 )=====";
@@ -229,8 +247,9 @@ PROGMEM const char HTML_PAGE_DEF_END[] = R"=====(
           <tfoot>
             <tr>
               <td style="text-align: center;" colspan="5">
-              <button title='View sensors daily log' onClick='window.location.href="/cmd?view="'>Logs</button>
-              <button title='Send device mqtt discovery message to Homeassistant' onClick='window.location.href="/cmd?hasDiscovery=1"'>HAS discovery</button>
+              <button title='View sensors daily log' onClick='window.location.href="/cmd?view="'>Day</button>
+              <button title='View sensors monthly logs' onClick='window.location.href="/fs?dir=/data"'>Logs</button>
+              <button title='Send device mqtt discovery message to Homeassistant' onClick='window.location.href="/cmd?hasDiscovery=1"'>Discover</button>
               <button title='Configure this device' onClick='window.location.href="/cfg"'>Configure</button>
               <button title='Reboot device' onClick='window.location.href="/cmd?reboot=1"'>Reboot</button>
               <button title='Factory defaults' onClick='window.location.href="/cmd?reset=1"'>Reset</button>
@@ -300,6 +319,24 @@ void connectToNetwork(){
 String getJsonBuff();
 void mqttSetupDevice(String chipId);
 
+String valueUnits(String key){
+  if(key=="lux"){
+    return  " lx";
+  }else if(key=="temp"){
+    return " °C";
+  }else if(key=="humid" || key=="batPerc"){
+    return " %";
+  }else if(key=="pressure"){
+    return " hPa";
+  }else if(key=="RSSI"){
+    return " dBm";    
+  }else if(key=="batVolt"){
+    return " Volt";    
+  }else if(key=="batDays"){
+    return " days";    
+  }
+  return "";
+}
 // Handler function for root of the web page 
 static void handleRoot(){
   //Read on each refresh
@@ -316,26 +353,26 @@ static void handleRoot(){
   }
   JsonObject root = doc.as<JsonObject>();
   String out(HTML_PAGE_DEF_START);
-  out.replace("{appName}",conf["host_name"]);
+  out.replace("{host_name}",conf["host_name"]);
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   pServer->sendContent(out);
   for (JsonPair kv : root) {
       String line(HTML_PAGE_DEF_LINE);
       line.replace("{key}", kv.key().c_str());
+      String units = valueUnits(kv.key().c_str());
       //Value type?
       if(kv.value().is<bool>())
-        line.replace("{val}", String(kv.value().as<bool>()));
+        line.replace("{val}", String(kv.value().as<bool>()) + units);
       else if(kv.value().is<int>())
-        line.replace("{val}", String(kv.value().as<int>()));
+        line.replace("{val}", String(kv.value().as<int>()) + units);
       else if(kv.value().is<long>())
-        line.replace("{val}", String(kv.value().as<long>()));
+        line.replace("{val}", String(kv.value().as<long>()) + units);
       else if(kv.value().is<float>())
-        line.replace("{val}", String(kv.value().as<float>()));
+        line.replace("{val}", String(kv.value().as<float>(),1) + units);
       else if(kv.value().is<double>())
-        line.replace("{val}", String(kv.value().as<double>()));
+        line.replace("{val}", String(kv.value().as<double>(), 1) + units);
       else if(kv.value().is<const char*>())
-        line.replace("{val}", kv.value().as<const char*>());
-
+        line.replace("{val}", String(kv.value().as<const char*>()) + units);
       pServer->sendContent(line);
   }
   String end(HTML_PAGE_DEF_END);
@@ -449,6 +486,51 @@ static void handleAssistRoot() {
   conf.handleFormRequest(pServer); 
   pServer->sendContent(String(HTML_PING_SCRIPT));
 }
+// Handler function to list file sytem.
+static void handleFileSytem(){
+  String dir(DATA_DIR);
+  if(pServer->hasArg("dir")){
+    dir = pServer->arg("dir");
+    if(dir.endsWith("/")) dir.remove(dir.length() - 1);
+  }
+  std::vector<String> dirArr;   //Directory array
+  std::vector<String> fileArr;  //Files array
+  listSortedDir(dir, dirArr, fileArr );
+  pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
+  pServer->sendHeader("Content-Type", "text/html");
+  String out ="";
+  out += "<style> a { text-decoration: none; }</style>\n";
+  out += "Directory: <b>" + dir + "</b></br></br>\n";
+  uint8_t row = 0;
+  while (row++ < dirArr.size()) { 
+    String d = dirArr[row - 1];    
+    if(row==1){
+      String up = d.substring( 0, d.lastIndexOf("/") );
+      if(up != "" && up != dir)  out += "<a href='/fs?dir=" + up + "'><b>[ .. ]</b></a></br>\n";
+    }
+    if(d!=dir) out += "<a href='/fs?dir=" + d + "'><b>[ " + d + " ]</b></a></br>\n";
+    pServer->sendContent(out.c_str(), out.length());
+    out = "";
+  }
+  row=0;
+  while (row++ < fileArr.size()) { 
+    String f = fileArr[row - 1];
+    out =  "<a title='View' href='/cmd?view=" + dir + "/" + f + "'><b>" + f + "</b></a>&nbsp;&nbsp;&nbsp;";
+    out += "<a title='Download' href='/cmd?download=" + dir + "/" + f + "'>[ v ]</a>&nbsp;";
+    #if defined(DEBUG_FILES)
+      out += "<a title='Delete' href='/cmd?del=" + dir + "/" + f + "'>[ - ]</a>\n";
+    #endif
+    out += "</br>";
+    pServer->sendContent(out.c_str(), out.length());
+  }
+  size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
+  out = "</br>";
+  out += "<small>Total space: " + String(STORAGE.totalBytes() / 1024) + " K, ";  
+  out += "Used: " + String(STORAGE.usedBytes() / 1024) + " K, ";  
+  out += "Free: " + String(free / 1024) + " K</small></br>";  
+  pServer->sendContent(out.c_str(), out.length());
+  pServer->client().flush(); 
+}
 
 // Websockets handler
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -522,7 +604,8 @@ void startWebSever(){
   pServer->on("/", handleRoot);
   pServer->on("/cmd", handleCmd);
   pServer->on("/cfg", handleAssistRoot);
-  pServer->on("/pg", handlePing);  
+  pServer->on("/pg", handlePing);
+  pServer->on("/fs", handleFileSytem);
   LOG_INF("Started web server at port: 80\n");
   pWebSocket = new WebSocketsServer(81);
   pWebSocket->begin();
