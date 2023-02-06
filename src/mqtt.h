@@ -177,39 +177,45 @@ void subscribeConfig(String topicPref){
   mqttClient.subscribe(topicConfig.c_str());
   LOG_INF("Subscribed at: %s\n",topicConfig.c_str());
 }
-
+  
 String getJsonBuff(){
 
   StaticJsonDocument<1536> doc;
   //Set the values in the document according to SensorData  
   JsonObject plant = doc.to<JsonObject>();
   float voltAvg = (atof(lastBoot["bat_voltage"].c_str()) + data.batVolt ) / 2.0F;
-  LOG_DBG("Battery last volt: %s, cur: %1.4f, avg: %1.4f\n", lastBoot["bat_voltage"].c_str(), data.batVolt, voltAvg);
+  LOG_DBG("Battery last volt: %s, cur: %1.3f, avg: %1.3f\n", lastBoot["bat_voltage"].c_str(), data.batVolt, voltAvg);
+  
+  float percAvg = (atof(lastBoot["bat_perc"].c_str()) + data.batPerc ) / 2.0F;
+  LOG_DBG("Battery last perc: %s, cur: %3.1f, avg: %3.1f\n", lastBoot["bat_perc"].c_str(), data.batPerc, percAvg);
+  percAvg = truncateFloat(percAvg, 0);
   
   plant["sensorName"] = conf["plant_name"];
-  plant["deviceName"] = conf["host_name"];
-  plant["chipId"] = chipID;
+  //plant["deviceName"] = conf["host_name"];
+  //plant["chipId"] = chipID;
   plant["time"] = data.time;
-  plant["batChargeDate"] = data.batChargeDate;
-  plant["lux"] = truncate(data.lux + atof(conf["offs_lux"].c_str()), 2); 
-  plant["temp"] = truncate(data.temp + atof(conf["offs_temp"].c_str()), 2);
-  plant["humid"] = truncate(data.humid + atof(conf["offs_humid"].c_str()), 2);
-  plant["pressure"] = truncate(data.pressure + atof(conf["offs_pressure"].c_str()), 2);
-  plant["soil"] = data.soil + atof(conf["offs_soil"].c_str());
-  plant["salt"] = data.salt + atof(conf["offs_salt"].c_str());
+  plant["lux"] = truncateFloat(data.lux + atof(conf["offs_lux"].c_str()), 1); 
+  plant["temp"] = truncateFloat(data.temp + atof(conf["offs_temp"].c_str()), 1);
+  plant["humid"] = truncateFloat(data.humid + atof(conf["offs_humid"].c_str()), 1);
+  plant["pressure"] = truncateFloat(data.pressure + atof(conf["offs_pressure"].c_str()), 1);
+  plant["soil"] = (data.soil + conf["offs_soil"].toInt());
+  plant["salt"] = (data.salt + conf["offs_salt"].toInt());
   // plant["soilTemp"] = config.soilTemp; 
   // plant["saltadvice"] = config.saltadvice;
   // plant["plantValveNo"] = plantValveNo; 
   // plant["wifissid"] = WiFi.SSID();
+  plant["batChargeDate"] = data.batChargeDate;
+  plant["batPerc"] = percAvg; //data.batPerc;
+  plant["batVolt"] = truncateFloat(voltAvg, 2);
+  plant["batDays"] = truncateFloat(data.batDays, 1);
+  //plant["batLastPerc"] = lastBoot["bat_perc"];
+  //plant["batPercAvg"] = percAvg;
+  //plant["batLastVolt"] = truncate( atof(lastBoot["bat_voltage"].c_str()), 2);
+  plant["onPower"] = onPower;
   plant["bootCount"] = data.bootCnt;
   plant["bootCountError"] = data.bootCntError;    
-  plant["sleepReason"] = data.sleepReason;
-  plant["batPerc"] = truncate(data.batPerc, 0);
-  plant["batDays"] = truncate(data.batDays, 1);
-  plant["batVolt"] = truncate( voltAvg, 2);
-  plant["onPower"] = onPower;
-  plant["batLastVolt"] = truncate( atof(lastBoot["bat_voltage"].c_str()),1);
   plant["loopMillis"] = millis() - appStart;
+  plant["sleepReason"] = data.sleepReason;
   plant["RSSI"] = WiFi.RSSI(); //wifiRSSI;
   
   #if defined(DEBUG_MQTT)
