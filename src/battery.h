@@ -18,6 +18,7 @@ float calcBattery(uint16_t AdcVolt)
   data.batVolt = battery_voltage;
   //Battery volt percents
   float batPerc = 100.0F * ( battery_voltage - bat_volt_low ) / ( bat_volt_high - bat_volt_low);
+  batPerc = truncateFloat(batPerc, 1);
   LOG_INF("Battery ADC volt: %lu, volt: %3.3f, perc: %3.1f %%\n", AdcVolt, battery_voltage, batPerc);
   return batPerc;
   
