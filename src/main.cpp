@@ -26,7 +26,8 @@
 #include "SPIFFS.h"
 #include <ESPmDNS.h>
 
-#define APP_VER "1.0.2"   // Websockets to update, mqtt command to remote setup.
+#define APP_VER "1.0.3"   // View file system logs, truncate values, Added values units
+//#define APP_VER "1.0.2" // Websockets to update, mqtt command to remote setup.
 //#define APP_VER "1.0.1" // Added log sensors to a daily csv file, View the log from main page.
 //#define APP_VER "1.0.0" // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
 
@@ -52,9 +53,9 @@ struct SensorData
   float lux;
   float temp;
   float humid;
-  float soil;
   //float soilTemp;
-  float salt;
+  uint16_t soil;
+  uint16_t salt;
   //String saltadvice;
   float batPerc;  
   float batVolt;
@@ -162,9 +163,6 @@ void setup()
   //Load last boot ini file
   lastBoot.init(lastBootDict_json, LAST_BOOT_CONF);
 
-  //Initialize on board sensors
-  initSensors();  
-  
   //Initialize config class
   conf.init(appConfigDict_json);
   //Failed to load config or ssid empty
@@ -175,7 +173,17 @@ void setup()
     ResetCountdownTimer();
     return;
   }
-   
+  
+  //Replace host name mac id
+  String host_name = conf["host_name"];
+  if(host_name.indexOf("{mac}")>=0){
+    host_name.replace("{mac}", conf.getMacID());
+    conf.put("host_name", host_name);
+  }
+
+  //Initialize on board sensors
+  initSensors();  
+  
   //Start ST WiFi
   connectToNetwork();
   
@@ -207,7 +215,8 @@ void loop(){
     publishSensors(data);
   
     //Remember last volt
-    lastBoot.put("bat_voltage", String(data.batVolt)); 
+    lastBoot.put("bat_voltage", String(data.batVolt),true);
+    lastBoot.put("bat_perc", String(data.batPerc,1),true);
     
     //Remember last boot vars?
     //lastBoot.saveConfigFile(LAST_BOOT_CONF);
@@ -215,7 +224,7 @@ void loop(){
     data.sleepReason = "noSleep";
     
     //Read battery status
-    delay(100);
+    //delay(100);
     adcVolt = analogRead(BAT_ADC); 
     
     //Reset loop millis
@@ -252,6 +261,7 @@ void loop(){
     sensorReadMs = millis() + SENSORS_READ_INTERVAL;
     btPress = false;
     LOG_DBG("Button press for: %lu\n", millis() - btPressMs);
+    startWebSever();
   }
   //Clear retained?
   clearMqttRetainMsg();
