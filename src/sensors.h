@@ -105,13 +105,13 @@ void logSensors(){
     line +="\n";
   }
   line += data.time + sep;
-  line += data.temp + sep;
-  line += data.humid + sep;
-  line += data.pressure + sep;
-  line += data.lux + sep;
-  line += data.soil + sep;
-  line += data.salt + sep;
-  line += data.batPerc;
+  line += String(data.temp + atof(conf["offs_temp"].c_str()), 2) + sep;
+  line += String(data.humid + atof(conf["offs_humid"].c_str()), 2) + sep;
+  line += String(data.pressure + atof(conf["offs_pressure"].c_str()), 2) + sep;
+  line += String(data.lux + atof(conf["offs_lux"].c_str()), 1) + sep;
+  line += (data.soil + conf["offs_soil"].toInt()) + sep;
+  line += (data.salt + conf["offs_salt"].toInt()) + sep;
+  line += String(data.batPerc, 0);
   line +="\n";
   writeFile(fullPath.c_str(), line.c_str());
   LOG_DBG("Log to: %s, line: %s", fullPath.c_str(),line.c_str() );
@@ -153,7 +153,7 @@ void readSensors(){
   //data.saltadvice = getSaltAdvice(salt);
 
   //Battery status, and charging status and days.
-  data.batPerc  = calcBattery(adcVolt);  
+  data.batPerc  = calcBattery(adcVolt);
   data.batDays = calcBatteryDays();
   //Correction
   if(data.batPerc > 100.0F) data.batPerc = 100.0F;
