@@ -38,22 +38,17 @@ updated automatically every 30 secs at home page.
 
 To **re-configure** device press `configure` button from homepage end redirect to configuration page. 
 
-To make device visible in **Home Assistant** press the`HAS discovery` button from home page. A mqtt **auto discovery** messages will be send to Home assistant
+To make device visible in **Home Assistant** press the`Discovery` button from home page. A mqtt **auto discovery** messages will be send to Home assistant
 to configure **Plant Status** as a mqtt device. Visit **HAS devices** page to see the new **T-HIGROW** MQTT device.
 
-**Active** daily log file can be viewed in the browser by button `Log` in home page. And old history file can be viewed with command ..
-
-`http://192.168.4.1/cmd?view=/data/2023-01/2023-01-30.csv`
-
-An old log file can be donwloaded with comand..
-
-`http://192.168.4.1/download?view=/data/2023-01/2023-01-30.csv`
-
-*(replace dates as needed)*
+**Active** daily log file can be viewed in the browser by button `Daily` in home page. 
+Old **monthly** history logs can be viewed with button `Logs`. Navigate to SPIFFS directories and chose a date log file. Use icons to view or download a log file.
 
 Remote configuration commands can be send as retained messages from a mosquitto broker. Messages will be delivered on next reboot,
-alter the configuration and save to SPIFFS to be loaded on next reboot. Commands can be ``variable``=``val`` in order to set 
-a variable to a value, or ``variable``+=``val`` to increase or decrease value.
+alter the configuration and save to SPIFFS to be loaded on next reboot. Commands can be 
+* ``variable``=``val`` in order to set a variable to a value
+* ``variable``+=``val`` to increase or decrease value.
+
 Valid parameters names with default values are defined in `include/user-variables.h`  line: 27 const char* appConfigDict_json 
 
 Fom example from a mqtt broker server publish the command with the parameter you want to change..
@@ -66,6 +61,18 @@ Fom example from a mqtt broker server publish the command with the parameter you
  
 After disconnecting your browser, **device** will automatically enter to deep sleep again to preserve battery.
 
+PlanStatus home page.
 <p align="center">
   <img src="images/PlantStatus.png">
 </p>
+
+PlantStatus log file view
+<p align="center">
+  <img src="images/PlantStatus_log.png">
+</p>
+
+PlantStatus config page
+<p align="center">
+  <img src="images/PlantStatus_config.png">
+</p>
+
