@@ -186,6 +186,10 @@ const char* lastBootDict_json PROGMEM = R"~([{
      "label": "Date that the battery is stop charging. (leave blank)",
    "default": ""
   },{
+      "name": "bat_perc",
+     "label": "The battery voltage. (leave blank)",
+   "default": ""
+  },{
       "name": "bat_voltage",
      "label": "The battery voltage. (leave blank)",
    "default": ""
