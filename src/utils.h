@@ -91,6 +91,8 @@ String getSaltAdvice(uint32_t salt){
   else if (salt > 350)   advice = "too high";  
   return advice;
 }
+float truncateFloat(float v, int prec=1){  return atof(String(v, prec).c_str());   }
+
 bool isNumeric(String s){ //1.0, -.232, .233, -32.32
   unsigned int l = s.length();
   if(l==0) return false;
@@ -126,18 +128,6 @@ bool isInt(const std::string& str)
     char* ptr;
     strtol(str.c_str(), &ptr,10);
     return (*ptr) == '\0';
-}
-// Truncate a float value
-float truncate(float val, byte dec){
-    float x = val * pow(10, dec);
-    float y = round(x);
-    float z = x - y;
-    if ((int)z == 5)
-    {
-        y++;
-    } else {}
-    x = y / pow(10, dec);
-    return x;
 }
 
 // Reset timer used for sleep
