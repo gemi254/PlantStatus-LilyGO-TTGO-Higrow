@@ -76,3 +76,8 @@ PlantStatus config page
   <img src="images/PlantStatus_config.png">
 </p>
 
+Home Assistand Mqtt device
+<p align="center">
+  <img src="images/homeassistant_device.png">
+</p>
+
