@@ -49,3 +49,47 @@ void listDir(const char * dirname, uint8_t levels) {
     file = root.openNextFile();
   }
 }
+
+bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<String> &fileArr ) {
+  LOG_INF("Listing directory: %s\n", dirName.c_str());
+  File root = STORAGE.open(dirName.c_str());
+  if (!root) {
+    LOG_ERR("Failed to open directory\n");
+    return false;
+  }
+  if (!root.isDirectory()) {
+    LOG_ERR("Not a directory\n");
+    return false;
+  }
+
+  File file = root.openNextFile();
+  String oPath = "";
+  while (file) {
+    String filePath = file.path();
+    String dirPath = filePath.substring( 0, filePath.lastIndexOf("/") );
+    String fileName = filePath.substring( filePath.lastIndexOf("/") + 1);
+
+    if(oPath != dirPath ){
+      oPath = dirPath;
+      LOG_DBG("dir: %s, file: %s\n", dirPath.c_str(),fileName.c_str());
+      dirArr.push_back(dirPath);
+    }
+    String subDir = filePath.substring( 0, filePath.lastIndexOf("/") );
+    //LOG_DBG("Dir: %s, sub Dir: %s\n", dirName.c_str(), subDir.c_str());
+    if(dirName == subDir)
+      fileArr.push_back(fileName);
+
+    file = root.openNextFile();
+  }
+  std::sort(dirArr.begin(), dirArr.end(), [] (
+    const String &a, const String &b) {
+    return a > b;}
+  );  
+  dirArr.erase(std::unique(dirArr.begin(), dirArr.end()), dirArr.end());
+
+ std::sort(fileArr.begin(), fileArr.end(), [] (
+    const String &a, const String &b) {
+    return a > b;}
+  );
+  return true;
+}
