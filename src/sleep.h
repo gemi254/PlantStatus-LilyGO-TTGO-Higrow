@@ -22,7 +22,8 @@ void goToDeepSleep(const char *reason, bool error=true)
   if(error) lastBoot.put("boot_cnt_err", String(lastBoot["boot_cnt_err"].toInt() + 1));
   else lastBoot.put("boot_cnt", String(lastBoot["boot_cnt"].toInt() + 1));
   lastBoot.put("sleep_reason", String(reason));
-  lastBoot.put("bat_voltage", String(data.batVolt)); 
+  lastBoot.put("bat_voltage", String(data.batVolt,2));
+  lastBoot.put("bat_perc", String(data.batPerc,1)); 
   //Save last boot vars
   lastBoot.saveConfigFile(LAST_BOOT_CONF);
 
