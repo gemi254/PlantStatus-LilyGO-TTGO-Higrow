@@ -257,12 +257,18 @@ PROGMEM const char HTML_PAGE_DEF_END[] = R"=====(
           </tfoot>
         </table>
         </br>
-        <span><small>Ver: {appVer}</small></span>
+        <span><small>PlantStatus Ver: {appVer}</small></span>
       </div>
 </center>
 </body>
 </html>
 )=====";
+
+
+//Back button
+PROGMEM const char HTML_BACK_SCRIPT[] = R"~(
+<small><a href="" onClick="window.history.go(-1); return false;">[&nbsp;Back&nbsp;]</a></small>
+)~";
 
 // Ping script
 PROGMEM const char HTML_PING_SCRIPT[] = R"~(
@@ -396,7 +402,7 @@ static void handleViewFile(String fileName, bool download=false){
   }
   if (download) {  
     // download file as attachment, required file name in inFileName
-    LOG_INF("Download file: %s, size: %0.1fMB", fileName.c_str(), (float)(f.size()/ONEMEG));
+    LOG_INF("Download file: %s, size: %0.1f K", fileName.c_str(), (float)(f.size()/(1024)));
     pServer->sendHeader("Content-Type", "text/text");
     pServer->sendHeader("Content-Disposition", "attachment; filename=" + fileName);
     pServer->sendHeader("Content-Length", String(f.size()));
@@ -409,7 +415,7 @@ static void handleViewFile(String fileName, bool download=false){
     return;
   }
 
-  LOG_INF("View file: %s, size: %0.1fMB\n", fileName.c_str(), (float)(f.size()/(ONEMEG)));
+  LOG_INF("View file: %s, size: %0.1f K\n", fileName.c_str(), (float)(f.size()/(1024)));
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   byte chunk[CHUNKSIZE];
   size_t chunksize;
@@ -417,7 +423,7 @@ static void handleViewFile(String fileName, bool download=false){
     chunksize = f.read(chunk, CHUNKSIZE); 
     pServer->sendContent((char *)chunk, chunksize);
   } while (chunksize != 0);
-  f.close();
+  f.close();  
   pServer->client().flush(); 
 }
 
@@ -434,7 +440,7 @@ static void handleCmd(){
       String file(pServer->arg(i));
       if(file=="") file = getLogFileName(false);
       handleViewFile(file);
-      pServer->sendContent("\n\nFile: " + file );      
+      pServer->sendContent("\n\nFile: " + file );
       pServer->client().flush();
       return;
     }else if(cmd=="download"){
@@ -493,8 +499,9 @@ static void handleFileSytem(){
     dir = pServer->arg("dir");
     if(dir.endsWith("/")) dir.remove(dir.length() - 1);
   }
-  std::vector<String> dirArr;   //Directory array
-  std::vector<String> fileArr;  //Files array
+  std::vector<String> dirArr;               //Directory array
+  std::vector<std::vector<String>> fileArr; //Files array
+  
   listSortedDir(dir, dirArr, fileArr );
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   pServer->sendHeader("Content-Type", "text/html");
@@ -514,11 +521,14 @@ static void handleFileSytem(){
   }
   row=0;
   while (row++ < fileArr.size()) { 
-    String f = fileArr[row - 1];
-    out =  "<a title='View' href='/cmd?view=" + dir + "/" + f + "'><b>" + f + "</b></a>&nbsp;&nbsp;&nbsp;";
-    out += "<a title='Download' href='/cmd?download=" + dir + "/" + f + "'>[ v ]</a>&nbsp;";
+    String f = fileArr[row - 1][0];
+    String s = fileArr[row - 1][1];
+    out="";
+    if(row==1) out+="</br>";
+    out += "<a title='View' href='/cmd?view=" + dir + "/" + f + "'><b>" + f + "&nbsp;&nbsp" + s + " Kb</b></a>&nbsp;&nbsp;&nbsp;";
+    out += "<a title='Download' href='/cmd?download=" + dir + "/" + f + "'>[ Down ]</a>&nbsp;";
     #if defined(DEBUG_FILES)
-      out += "<a title='Delete' href='/cmd?del=" + dir + "/" + f + "'>[ - ]</a>\n";
+      out += "<a title='Delete' href='/cmd?del=" + dir + "/" + f + "'>[ Del ]</a>\n";
     #endif
     out += "</br>";
     pServer->sendContent(out.c_str(), out.length());
@@ -528,7 +538,9 @@ static void handleFileSytem(){
   out += "<small>Total space: " + String(STORAGE.totalBytes() / 1024) + " K, ";  
   out += "Used: " + String(STORAGE.usedBytes() / 1024) + " K, ";  
   out += "Free: " + String(free / 1024) + " K</small></br>";  
-  pServer->sendContent(out.c_str(), out.length());
+  out += "</br>" + String(HTML_BACK_SCRIPT);
+  out += "</br>" + String(HTML_PING_SCRIPT);
+  pServer->sendContent(out.c_str(), out.length());  
   pServer->client().flush(); 
 }
 
