@@ -4,7 +4,8 @@
   #undef LOG_DBG
   #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
 #endif
-//Mqtt retain commands received
+
+// Mqtt retain commands received
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if(length==0) return;
   String msg="";
@@ -99,6 +100,7 @@ void clearMqttRetainMsg(){
     clearMqttRetain = false;
   } 
 }
+
 //Send mqtt autodiscovery messages
 void mqttSetup(String identyfikator, String chipId, String uom = "x", String dc = "x" )
 {
@@ -155,9 +157,9 @@ if (mqttClient.publish(topic_c, buffer_c, retained)) {
   }
 }
 
+// Home Assitant MQTT Autodiscovery messages
+// https://www.home-assistant.io/integrations/sensor/#device-class
 void mqttSetupDevice(String chipId){    
-    //https://www.home-assistant.io/integrations/sensor/#device-class
-    //Home Assitant MQTT Autodiscovery messages
     Serial.println("Setting homeassistant mqtt device..");
     mqttSetup("lux",            chipId, "lx", "illuminance");
     mqttSetup("humid",          chipId, "%",  "humidity");
@@ -169,7 +171,8 @@ void mqttSetupDevice(String chipId){
     mqttSetup("batVolt",        chipId, "V",  "voltage");
     mqttSetup("RSSI",           chipId, "dBm", "signal_strength");
 }
-//Receive mqtt config commands
+
+// Receive mqtt config commands
 void subscribeConfig(String topicPref){
   //Subscribe to config topic
   topicConfig = topicPref + "/config";
@@ -177,7 +180,8 @@ void subscribeConfig(String topicPref){
   mqttClient.subscribe(topicConfig.c_str());
   LOG_INF("Subscribed at: %s\n",topicConfig.c_str());
 }
-  
+
+// Get a json with sensors
 String getJsonBuff(){
 
   StaticJsonDocument<1536> doc;
@@ -222,13 +226,13 @@ String getJsonBuff(){
     serializeJsonPretty(doc, Serial);
     Serial.println();
   #endif
-  // Send to mqtt
+  //Send to mqtt
   char buffer[1536];
   serializeJson(doc, buffer);  
   return String(buffer);
 }
 
-// Allocate a  JsonDocument
+// Publish sensors data to mqtt
 void publishSensors(const SensorData &data) {
   if(WiFi.status() != WL_CONNECTED) return;
   
@@ -267,4 +271,3 @@ void publishSensors(const SensorData &data) {
     }    
   #endif
 }
-
