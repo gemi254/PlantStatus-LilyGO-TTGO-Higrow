@@ -1,9 +1,8 @@
 // Calc battery state
-float calcBattery(uint16_t AdcVolt)
-{
-  // battery volt measured with multimetr, after disconecting from board, and value reported near end of work
+float calcBattery(uint16_t AdcVolt){
+  // Battery adc volt measured with multimetr, after disconecting from board,
+  // and value reported at end discharge, and value reported just after charging
   uint16_t bat_reading_low = 1551;
-  //battery volt measured with multimetr, after disconecting from board and value reported just after charging
   uint16_t bat_reading_high = 2370;
 
   data.batAdcVolt = AdcVolt;
