@@ -34,8 +34,6 @@ void initSensors(){
 }
 
 // READ Salt
-// I am not quite sure how to read and use this number. I know that when put in water wich 
-// a DH value of 26, it gives a high number, but what it is and how to use ??????
 uint32_t readSalt()
 {
   uint8_t samples = 120;
@@ -59,10 +57,9 @@ uint32_t readSalt()
 }
 
 // Read and calibrate Soil
-uint16_t readSoil(){
-  
+uint8_t readSoil(){  
   uint16_t soil = analogRead(SOIL_PIN);
-  uint16_t soilM = map(soil, conf["soil_min"].toInt(), conf["soil_max"].toInt(), 100, 0);
+  uint8_t soilM = map(soil, conf["soil_min"].toInt(), conf["soil_max"].toInt(), 100, 0);
   LOG_DBG("Soil org: %lu map: %lu\n",soil ,soilM);  
   return soilM;
 }
@@ -141,14 +138,14 @@ void readSensors(){
     data.pressure = bme_pressure;
   }
 
-  uint16_t soil = readSoil();
+  uint8_t  soil = readSoil();
   data.soil = soil;
   /*
   float soilTemp = readSoilTemp();
   data.soilTemp = soilTemp;
 */
   uint32_t salt = readSalt();
-  data.salt = salt;
+  data.salt = (uint8_t)salt;
 
   //data.saltadvice = getSaltAdvice(salt);
 
