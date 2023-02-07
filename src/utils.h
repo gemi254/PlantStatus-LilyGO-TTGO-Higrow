@@ -14,23 +14,11 @@ static void showLocalTime(const char* timeSrc) {
   LOG_INF("Got current time from %s: %s \n", timeSrc, timeFormat);
   timeSynchronized = true;
 }
-
-// Get a string of current chip id
+// Get mac id
 String getChipID(){
-  byte mac[6];
-  WiFi.macAddress(mac);
-
-  String chipId = "";
-  String HEXcheck = "";
-  for (int i = 0; i <= 5; i++) {
-    HEXcheck = String(mac[i], HEX);
-    if (HEXcheck.length() == 1) {
-      chipId = chipId + "0" + String(mac[i], HEX);
-    } else {
-      chipId = chipId + String(mac[i], HEX);
-    }
-  }  
-  return chipId;
+  String mac = WiFi.macAddress();
+  mac.replace(":","");
+  return mac.substring(6);
 }
 
 // Get current time from NTP server and apply to ESP32
@@ -48,6 +36,7 @@ bool getLocalNTPTime() {
     return false;
   }
 }
+
 // Sync time to ntp
 void syncTime(){
   int tries=8;
@@ -57,6 +46,7 @@ void syncTime(){
   };
   LOG_INF("Time sync: %i\n", timeSynchronized);
 }
+
 // Convert a string to time_t
 time_t convertDateTimeString(String sDateTime){  
   tmElements_t tm;
@@ -70,6 +60,7 @@ time_t convertDateTimeString(String sDateTime){
   tm.Second = Second;
   return makeTime(tm);
 }
+
 // Get a string of current date/time
 String getCurDateTimeString(bool isFolder = false, bool isFile=false) {
   // construct timestamp from date/time
@@ -82,6 +73,7 @@ String getCurDateTimeString(bool isFolder = false, bool isFile=false) {
   else strftime(buff, buff_Len, "%Y-%m-%d %H:%M:%S", localtime(&currEpoch));
   return String(buff);
 }
+
 // Get an advice on salt
 String getSaltAdvice(uint32_t salt){
   String advice;
@@ -91,6 +83,7 @@ String getSaltAdvice(uint32_t salt){
   else if (salt > 350)   advice = "too high";  
   return advice;
 }
+
 float truncateFloat(float v, int prec=1){  return atof(String(v, prec).c_str());   }
 
 bool isNumeric(String s){ //1.0, -.232, .233, -32.32
@@ -135,10 +128,10 @@ void ResetCountdownTimer(){
   sleepTimerCountdown = SLEEP_DELAY_INTERVAL; 
 }
 
+// Remove all ini files 
 void reset(){
   LOG_DBG("Removing ini files.");
   listDir("/", 1);
   lastBoot.deleteConfig(LAST_BOOT_CONF);
   conf.deleteConfig(CONF_FILE);
 }
-
