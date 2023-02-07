@@ -5,11 +5,10 @@
   #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
 #endif
 
-#define ONEMEG (1024 * 1024)
-#define DATA_DIR "/data" //Dicectory to save data logs
-String readString; // do not change this variable
+#define MIN_STORAGE_SPACE (64 * 1024)  //Minimum allowed space for log rotate to work
+#define DATA_DIR "/data"                //Dicectory to save data logs
 
-//Append text at end of a file
+// Append text at end of a file
 void writeFile(const char * path, const char * message) {
   File file = STORAGE.open(path, FILE_APPEND);
   if (!file) {
@@ -22,7 +21,7 @@ void writeFile(const char * path, const char * message) {
     LOG_ERR("\nFailed to write: %s\n", path);
   }
 }
-
+// List a directory
 void listDir(const char * dirname, uint8_t levels) {
   LOG_INF("Listing directory: %s\n", dirname);
 
@@ -49,18 +48,19 @@ void listDir(const char * dirname, uint8_t levels) {
     file = root.openNextFile();
   }
 }
-
-bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<String> &fileArr ) {
+//List dir and files sorded by name disc
+bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<std::vector<String>> &fileArr ) {
   LOG_INF("Listing directory: %s\n", dirName.c_str());
   File root = STORAGE.open(dirName.c_str());
   if (!root) {
-    LOG_ERR("Failed to open directory\n");
-    return false;
+    LOG_ERR("Failed to open dir: %s\n", dirName.c_str());
+    return "";
   }
+  /*
   if (!root.isDirectory()) {
     LOG_ERR("Not a directory\n");
     return false;
-  }
+  }*/
 
   File file = root.openNextFile();
   String oPath = "";
@@ -71,13 +71,14 @@ bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<Stri
 
     if(oPath != dirPath ){
       oPath = dirPath;
-      LOG_DBG("dir: %s, file: %s\n", dirPath.c_str(),fileName.c_str());
       dirArr.push_back(dirPath);
     }
     String subDir = filePath.substring( 0, filePath.lastIndexOf("/") );
-    //LOG_DBG("Dir: %s, sub Dir: %s\n", dirName.c_str(), subDir.c_str());
+    LOG_DBG("List Dir: %s, sub Dir: %s  file: %s, sz: %lu\n", 
+      dirPath.c_str(), subDir.c_str(), fileName.c_str(), file.size());
+    
     if(dirName == subDir)
-      fileArr.push_back(fileName);
+      fileArr.push_back( {fileName, String(float(file.size()/1024),0)} );
 
     file = root.openNextFile();
   }
@@ -87,9 +88,77 @@ bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<Stri
   );  
   dirArr.erase(std::unique(dirArr.begin(), dirArr.end()), dirArr.end());
 
- std::sort(fileArr.begin(), fileArr.end(), [] (
-    const String &a, const String &b) {
-    return a > b;}
+  std::sort(fileArr.begin(), fileArr.end(), [] (
+    const std::vector<String> &a, const std::vector<String> &b) {
+    return a[0] > b[0];}
   );
   return true;
+}
+
+// Get the oldest dir inside a folder
+String getOldestDir(String dirName){
+
+ File root = STORAGE.open(dirName.c_str());
+  if (!root) {
+    LOG_ERR("Failed to open dir: %s\n", dirName.c_str());
+    return "";
+  }
+  
+  File file = root.openNextFile();
+  std::vector<String> dirArr;
+
+  String oPath = "";
+  while (file) {
+    String filePath = file.path();
+    String dirPath = filePath.substring( 0, filePath.lastIndexOf("/") );
+    String fileName = filePath.substring( filePath.lastIndexOf("/") + 1);
+
+    if(oPath != dirPath ){
+      oPath = dirPath;
+      LOG_DBG("dir: %s, file: %s\n", dirPath.c_str(), fileName.c_str());
+      dirArr.push_back(dirPath);
+    }   
+    file = root.openNextFile();
+  }
+  std::sort(dirArr.begin(), dirArr.end(), [] (
+    const String &a, const String &b) {
+    return a < b;}
+  );
+
+  return (dirArr.size()>0 ? dirArr[0] : "");
+}
+// Is spiffs dir
+bool isDirectory(String d) { return d.indexOf("/") >=0; }
+
+// Remove a folder from spiffs
+void removeFolder(String dirName){
+  File root = STORAGE.open(dirName.c_str());
+  if (!root) {
+    LOG_ERR("Failed to open dir: %s\n", dirName.c_str());
+    return;
+  }
+  
+  File file = root.openNextFile();
+  while (file) {
+    String filePath = file.path();
+    file = root.openNextFile();
+    LOG_INF("Removing file: %s \n", filePath.c_str());
+    /*
+    if(!STORAGE.remove(filePath.c_str())){
+      LOG_ERR("Remove FAILED: %s \n", filePath.c_str());
+    };*/
+  }
+  LOG_INF("Removing dir: %s \n", dirName.c_str());
+  //STORAGE.rmdir(dirName);
+}
+
+// Check an delete logs to save space
+void checkLogRotate(){
+  size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
+  LOG_DBG("Storage, free: %lu\n", free);
+  if(free < MIN_STORAGE_SPACE){
+    LOG_WRN("Storage is running low, free: %lu\n", free);
+    String oldestDir = getOldestDir(DATA_DIR);    
+    removeFolder(oldestDir);
+  }
 }
