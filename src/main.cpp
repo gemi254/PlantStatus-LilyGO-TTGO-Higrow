@@ -17,7 +17,6 @@
 #include <esp_wifi.h>
 #include "esp32/rom/rtc.h"
 #include <esp_bt.h>
-#include "user-variables.h"
 #include <18B20_class.h>
 #include <Adafruit_BME280.h>
 #include <WiFiClientSecure.h>
@@ -25,8 +24,10 @@
 #include <WebServer.h>
 #include "SPIFFS.h"
 #include <ESPmDNS.h>
+#include "user-variables.h"
 
-#define APP_VER "1.0.3"   // View file system logs, truncate values, Added values units
+
+#define APP_VER "1.0.3"   // View file system logs, truncate values, Added values units, Rotate log files
 //#define APP_VER "1.0.2" // Websockets to update, mqtt command to remote setup.
 //#define APP_VER "1.0.1" // Added log sensors to a daily csv file, View the log from main page.
 //#define APP_VER "1.0.0" // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
@@ -54,8 +55,8 @@ struct SensorData
   float temp;
   float humid;
   //float soilTemp;
-  uint16_t soil;
-  uint16_t salt;
+  uint8_t soil;
+  uint8_t salt;
   //String saltadvice;
   float batPerc;  
   float batVolt;
@@ -113,7 +114,7 @@ WebSocketsServer *pWebSocket = NULL;
   DS18B20 temp18B20(DS18B20_PIN);
 #endif
 
-// Start Subroutines
+// App config 
 #include "configAssist.h"        //Setup assistant class
 ConfigAssist conf;               //Config class
 ConfigAssist lastBoot;           //Save last boot vars
@@ -131,6 +132,7 @@ void setup()
 {
   appStart = millis(); //Application start time
   chipID = getChipID();
+  
   //User button check at startup  
   pinMode(USER_BUTTON, INPUT); 
   btState = !digitalRead(USER_BUTTON);
@@ -138,7 +140,7 @@ void setup()
   //Sensor power control pin, must set high to enable measurements
   pinMode(POWER_CTRL, OUTPUT);
   digitalWrite(POWER_CTRL, 1);
-  delay(100);
+  delay(200);
 
   adcVolt = analogRead(BAT_ADC); //Measure bat with no wifi enabled
   
@@ -152,13 +154,13 @@ void setup()
   if (!SPIFFS.begin(true)){
     LOG_ERR("Error mounting SPIFFS\n");
   }
+
+  checkLogRotate();
   //listDir("/", 3);
   //reset();
 
-  int resetReason = rtc_get_reset_reason(0);
-  if(resetReason = DEEPSLEEP_RESET){
+  if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
     LOG_DBG("Wake up from sleep\n");
-  }
   
   //Load last boot ini file
   lastBoot.init(lastBootDict_json, LAST_BOOT_CONF);
@@ -218,13 +220,9 @@ void loop(){
     lastBoot.put("bat_voltage", String(data.batVolt),true);
     lastBoot.put("bat_perc", String(data.batPerc,1),true);
     
-    //Remember last boot vars?
-    //lastBoot.saveConfigFile(LAST_BOOT_CONF);
-
     data.sleepReason = "noSleep";
     
     //Read battery status
-    //delay(100);
     adcVolt = analogRead(BAT_ADC); 
     
     //Reset loop millis
@@ -263,7 +261,7 @@ void loop(){
     LOG_DBG("Button press for: %lu\n", millis() - btPressMs);
     startWebSever();
   }
-  //Clear retained?
+  //Clear mqtt retained?
   clearMqttRetainMsg();
   delay(5);
 }
