@@ -94,7 +94,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 void clearMqttRetainMsg(){
   if(clearMqttRetain){
     LOG_INF("Clear mqtt retaining msgs\n");
-    mqttClient.publish(topicConfig.c_str(), "", true);
+    String topic = topicsPrefix + "/config";
+    mqttClient.publish(topic.c_str(), "", true);
     mqttClient.loop();
     //delay(1000);
     clearMqttRetain = false;
@@ -173,12 +174,13 @@ void mqttSetupDevice(String chipId){
 }
 
 // Receive mqtt config commands
-void subscribeConfig(String topicPref){
+void subscribeConfig(){
+  topicsPrefix = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipID;
+  const String topicConf = topicsPrefix + "/config";
   //Subscribe to config topic
-  topicConfig = topicPref + "/config";
   mqttClient.setCallback(mqttCallback);
-  mqttClient.subscribe(topicConfig.c_str());
-  LOG_INF("Subscribed at: %s\n",topicConfig.c_str());
+  mqttClient.subscribe(topicConf.c_str());
+  LOG_INF("Subscribed at: %s\n",topicConf.c_str());
 }
 
 // Get a json with sensors
@@ -231,31 +233,29 @@ String getJsonBuff(){
   serializeJson(doc, buffer);  
   return String(buffer);
 }
-
-// Publish sensors data to mqtt
-void publishSensors(const SensorData &data) {
-  if(WiFi.status() != WL_CONNECTED) return;
-  
-  LOG_INF("ChipId: %s\n", chipID);
+void mqttConnect(){
   String broker = conf["mqtt_broker"];  
   int port =  conf["mqtt_port"].toInt();
-
   //Connect to mqtt broker
-  LOG_INF("Connecting to MQTT broker: %s:%i \n", broker, port);
   mqttClient.setServer(broker.c_str(), port);
-  if (!mqttClient.connect(broker.c_str(), conf["mqtt_user"].c_str(), conf["mqtt_pass"].c_str())) {
+  bool con = mqttClient.connect(broker.c_str(), conf["mqtt_user"].c_str(), conf["mqtt_pass"].c_str());
+  if (!con) {
     LOG_ERR("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
     goToDeepSleep("mqttConnectFail");
   }else{
-    LOG_DBG("Connected to MQTT!\n");
+    LOG_INF("Connecting to MQTT broker: %s:%i OK\n", broker, port);  
   }
+}
+// Publish sensors data to mqtt
+void publishSensors(const SensorData &data) {
+  if(WiFi.status() != WL_CONNECTED) return;
 
-  const String topicPref = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipID + "";  
-  //Subscribe to config config
-  subscribeConfig(topicPref); 
-  
+  if(mqttClient.state() != MQTT_CONNECTED)
+    mqttConnect();
+
   //Publish status
-  const String topicStr =  topicPref + "/status";
+  topicsPrefix = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipID;
+  const String topicStr =  topicsPrefix + "/status";
   const char* topic = topicStr.c_str();
 
   String jsonBuff = getJsonBuff();
