@@ -18,15 +18,16 @@ float calcBattery(uint16_t AdcVolt){
   //Battery volt percents
   float batPerc = 100.0F * ( battery_voltage - bat_volt_low ) / ( bat_volt_high - bat_volt_low);
   batPerc = truncateFloat(batPerc, 1);
-  LOG_INF("Battery ADC volt: %lu, volt: %3.3f, perc: %3.1f %%\n", AdcVolt, battery_voltage, batPerc);
+  if (batPerc > BATT_PERC_ONPOWER) onPower = true;
+  else onPower = false;    
+  LOG_INF("Battery adcV: %lu, V: %3.3f, perc: %3.1f %%, onPower: %i\n", AdcVolt, battery_voltage, batPerc, onPower);
   return batPerc;
   
 }
 // Calculate battery discharge days
 float calcBatteryDays(){ 
   float daysOnBattery = 0.0F;
-  if (data.batPerc > BATT_PERC_ONPOWER){    
-    onPower = true;
+  if (onPower){    
     String curDate = getCurDateTimeString();
     //Is time synced?
     if(curDate.length()>0){
