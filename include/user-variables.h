@@ -2,27 +2,6 @@
 // START userdefined data
 // *******************************************************************************************************************************
 #include <Arduino.h>
-// Turn logging on/off - turn read logfile on/off, turn delete logfile on/off ---> default is false for all 3, otherwise it can cause battery drainage.
-const bool logging = false;
-
-// Uncomment next line to select if 18B20 soil temp sensor available, if available -->> define
-//#define USE_18B20_TEMP_SENSOR
-
-// If using the Greenhouse automatic watering repo, then assign a waterValveNo to the plant.
-//int plantValveNo = 1;
-
-#define LAST_BOOT_CONF "/lastboot.ini"
-#define CONNECT_TIMEOUT 10000
-#define MAX_SSID_ARR_NO 2 //Maximum ssid json will describe
-
-#define BATT_CHARGE_DATE_DIVIDER (86400.0F)
-#define BATT_PERC_ONPOWER (105.0F)
-
-#define uS_TO_S_FACTOR 1000000ULL    //Conversion factor for micro seconds to seconds
-#define SLEEP_CHECK_INTERVAL   2000  //Check if it is time to sleep (millis)
-#define SLEEP_DELAY_INTERVAL   30000 //After this time with no activity go to sleep
-#define SENSORS_READ_INTERVAL  30000 //Sensors read inverval in milliseconds on loop mode, 30 sec 
-
 // Modify the file with the default params for you application
 const char* appConfigDict_json PROGMEM = R"~(
 [{
@@ -114,7 +93,7 @@ const char* appConfigDict_json PROGMEM = R"~(
   "default": ""
 },{
      "name": "mqtt_port",
-    "label": "Mosquitto broker port",
+    "label": "Mosquitto broker port (1883)",
   "default": ""
 },{
      "name": "mqtt_user",
@@ -172,7 +151,7 @@ const char* appConfigDict_json PROGMEM = R"~(
 },{
      "name": "sleep_time",
     "label": "Time to deep sleep after measurements (Seconds)",
-  "default": "300"
+  "default": "600"
 },{
      "name": "sleep_time_error",
     "label": "Time to deep sleep if any error Wifi, MQTT connections (Seconds)",
