@@ -4,19 +4,19 @@ Application supports both **DHT** sensors (DHT11,DHT12,DHT22) or the new **BME28
 and the internal **soil moisture** and **soil salt** sensor.
 
 ## Main features
-+ Configure parameters using an **access point** and **config portal** on startup.
++ Configure parameters using an **access point** and **config portal** on startup. No need to re-compile for each device.
 + Publish sensor values in a **mqtt broker**.
 + **Homeassistant** integration using MQTT **auto discovery** interface.
-+ **Log** measurements in a daily **csv file** stored in SPIFFS. **View** file in browser.
-+ **Log** measurements monthly **csv files** stored in SPIFFS. **View** or **download** the files from browser.
-+ User button single Press -> Take measurement.
-+ User button long Press -> Connect to network and show a **web page with measurements** on mobile phone.
++ **Daily** measurements **Log** in a csv file stored in SPIFFS. **View** file in browser.
++ **Monthly** measurements **Logs** in csv files stored in SPIFFS. **View** or **download** the files from browser.
++ User button **single** Press -> Take measurement.
++ User button **long** Press -> Connect to network and show a **web page with measurements** on mobile phone.
 + **Websockets** to auto update sensor values in home page (No refresh).
 + **Sensors offsets** for device calibration.
 + **Auto sleep** after no activity.
 + Battery optimization.
-+ Mqtt wakeup function and remote configure functions.
-+ No need to compile for each device.
++ Mqtt **remote configure** commands and wakeup function.
+
 
 ## Install
 Compile the project using **platformio** or you can download the already compiled firmware from **/firmware** folder 
@@ -54,15 +54,16 @@ PlantStatus log file view
   <img src="images/PlantStatus_log.png">
 </p>
 
-Old **monthly** history logs can be viewed with button `Logs`. Navigate to SPIFFS directories and chose a date log file. Use icons to view or download a log file.
+If spiffs is running out of space Log files are **rotated** and the oldest dir will be deleted.
+Old **monthly** history can be viewed with `Logs` button. Navigate in SPIFFS Dates directories and chose a date log file. Use icons to view or download the file.
 
 PlantStatus oldeset log file view
 <p align="center">
   <img src="images/PlantStatus_log_dirs.png">
 </p>
 
-Remote configuration commands can be send as retained messages from a mosquitto broker. Messages will be delivered on next reboot,
-alter the configuration and save to SPIFFS to be loaded on next reboot. Commands can be 
+Remote configuration commands can be send as **retained** messages from a mosquitto broker. Messages will be delivered on next reboot,
+alter the configuration and save it to SPIFFS to be loaded on next reboot. Commands can be 
 * ``variable``=``val`` in order to set a variable to a value
 * ``variable``+=``val`` to increase or decrease value.
 
