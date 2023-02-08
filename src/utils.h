@@ -18,7 +18,8 @@ static void showLocalTime(const char* timeSrc) {
 String getChipID(){
   String mac = WiFi.macAddress();
   mac.replace(":","");
-  return mac.substring(6);
+  mac.toLowerCase();
+  return mac; //.substring(12);
 }
 
 // Get current time from NTP server and apply to ESP32
@@ -44,7 +45,7 @@ void syncTime(){
     delay(2000);
     tries--;
   };
-  LOG_INF("Time sync: %i\n", timeSynchronized);
+  if(tries==0) LOG_WRN("Time sync: %i\n", timeSynchronized);
 }
 
 // Convert a string to time_t
