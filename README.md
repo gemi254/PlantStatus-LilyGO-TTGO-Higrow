@@ -7,11 +7,12 @@ and the internal **soil moisture** and **soil salt** sensor.
 + Configure parameters using an **access point** and **config portal** on startup.
 + Publish sensor values in a **mqtt broker**.
 + **Homeassistant** integration using MQTT **auto discovery** interface.
-+ **Log** measurements in a daily **csv file** stored in SPIFFS. **View** or **download** the file in browser.
-+ **Sensors offsets** for device calibration.
++ **Log** measurements in a daily **csv file** stored in SPIFFS. **View** file in browser.
++ **Log** measurements monthly **csv files** stored in SPIFFS. **View** or **download** the files from browser.
 + User button single Press -> Take measurement.
 + User button long Press -> Connect to network and show a **web page with measurements** on mobile phone.
 + **Websockets** to auto update sensor values in home page (No refresh).
++ **Sensors offsets** for device calibration.
 + **Auto sleep** after no activity.
 + Battery optimization.
 + Mqtt wakeup function and remote configure functions.
@@ -24,25 +25,41 @@ and upload it to you device using **esptool.py** with command..
 esptool.py --port COM5 write_flash -fs 1MB -fm dout 0x0 PlantStatus.bin
 
 ## Usage
-On first boot **Plant Status** will create an access point named **T-HIGROW_{mac_id}** and wait for a client connection. Use your mobile phone 
-to connect and navigate your browser to **192.168.4.1** to enter device **setup portal**.
+On first boot **Plant Status** will create an access point named **T-HIGROW_{mac}** and wait for a client connection (**{mac}** will be replaced by device id. Use your mobile phone to connect and navigate your browser to **192.168.4.1** to enter device **setup portal**.
 
-Application variables can be edited in configuration portal and after making changes using the `Save` button they will be saved to an ini text file to spiffs.
+Application variables like (Wifi credencials, MQTT, offsets and others) can be edited there with the `Save` button will be saved to an ini text file to spiffs.
 
 Reboot the device by pressing `Reboot` button. On next loop device will wake up, take a measurement, publish it to mqtt and enter deep sleep again.
 During sleep, pressing the **user button** once, will make the device wake up, publish measurements and enter deep sleep again.
 
 Pressing the **user button** for long time (>5 sec) will make device to wake up, publish measurements, start a web server and wait 30 seconds 
 for a connection from a web browser. Connect and navigate you browser to device ip to see the live measurements. Measurements are 
-updated automatically every 30 secs at home page.
+updated automatically every 30 secs at the home page.
 
-To **re-configure** device press `configure` button from homepage end redirect to configuration page. 
+To **re-configure** device press `configure` button from homepage end redirect to configuration portal. 
 
 To make device visible in **Home Assistant** press the`Discovery` button from home page. A mqtt **auto discovery** messages will be send to Home assistant
-to configure **Plant Status** as a mqtt device. Visit **HAS devices** page to see the new **T-HIGROW** MQTT device.
+to configure **PlantStatus** as a mqtt device. Visit **HAS devices** page to see the new **T-HIGROW** MQTT device.
+
+Home Assistand Mqtt card & device
+<p align="left">
+  <img src="images/homeassistan_card.png">
+   <img src="images/homeassistant_device.png">
+</p>
 
 **Active** daily log file can be viewed in the browser by button `Daily` in home page. 
+
+PlantStatus log file view
+<p align="center">
+  <img src="images/PlantStatus_log.png">
+</p>
+
 Old **monthly** history logs can be viewed with button `Logs`. Navigate to SPIFFS directories and chose a date log file. Use icons to view or download a log file.
+
+PlantStatus oldeset log file view
+<p align="center">
+  <img src="images/PlantStatus_log_dirs.png">
+</p>
 
 Remote configuration commands can be send as retained messages from a mosquitto broker. Messages will be delivered on next reboot,
 alter the configuration and save to SPIFFS to be loaded on next reboot. Commands can be 
@@ -66,18 +83,8 @@ PlanStatus home page.
   <img src="images/PlantStatus.png">
 </p>
 
-PlantStatus log file view
-<p align="center">
-  <img src="images/PlantStatus_log.png">
-</p>
-
 PlantStatus config page
 <p align="center">
   <img src="images/PlantStatus_config.png">
-</p>
-
-Home Assistand Mqtt device
-<p align="center">
-  <img src="images/homeassistant_device.png">
 </p>
 
