@@ -27,7 +27,8 @@
 #include "user-variables.h"
 
 
-#define APP_VER "1.0.3"   // View file system logs, truncate values, Added values units, Rotate log files
+#define APP_VER "1.0.4"   // Replace mac id, No sleep onPower and error
+//#define APP_VER "1.0.3" // View file system logs, truncate values, Added values units, Rotate log files
 //#define APP_VER "1.0.2" // Websockets to update, mqtt command to remote setup.
 //#define APP_VER "1.0.1" // Added log sensors to a daily csv file, View the log from main page.
 //#define APP_VER "1.0.0" // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
@@ -44,6 +45,17 @@
 #define USER_BUTTON 35
 #define DS18B20_PIN 21
 
+#define LAST_BOOT_CONF "/lastboot.ini"
+#define CONNECT_TIMEOUT 10000
+#define MAX_SSID_ARR_NO 2 //Maximum ssid json will describe
+
+#define BATT_CHARGE_DATE_DIVIDER (86400.0F)
+#define BATT_PERC_ONPOWER (105.0F)
+
+#define uS_TO_S_FACTOR 1000000ULL    //Conversion factor for micro seconds to seconds
+#define SLEEP_CHECK_INTERVAL   1000  //Check if it is time to sleep (millis)
+#define SLEEP_DELAY_INTERVAL   30000 //After this time with no activity go to sleep
+#define SENSORS_READ_INTERVAL  30000 //Sensors read inverval in milliseconds on loop mode, 30 sec 
 // json sensors data 
 struct SensorData
 {
@@ -77,7 +89,7 @@ RTC_DATA_ATTR int bootCnt = 0;
 RTC_DATA_ATTR int bootCntError = 0;
 uint16_t adcVolt = 0;
 // Timers
-unsigned long sleepTimerCountdown = 3000; //Going to sleep timer
+unsigned long sleepTimerCountdown = 2000; //Going to sleep timer
 unsigned long sensorReadMs = millis() + SENSORS_READ_INTERVAL;    //Sensors read inteval
 unsigned long sleepCheckMs = millis();    //Check for sleep interval
 unsigned long btPressMs = 0;              //Button pressed ms
@@ -86,9 +98,9 @@ bool bmeFound = false;
 bool dhtFound = false;
 bool onPower = false;       //Is battery is charging
 bool clearMqttRetain = false;
-String chipID;              //Wifi chipid
-String topicConfig;         //Subscribe config topic
-uint8_t apClients = 0;      //Connected ap clients
+static String chipID;              //Wifi chipid
+static String topicsPrefix;        //Subscribe to topics
+static uint8_t apClients = 0;      //Connected ap clients
 
 // User button
 bool btPress = false;
@@ -148,7 +160,7 @@ void setup()
   Serial.print("\n\n\n\n");
   Serial.flush();
   LOG_INF("Starting..\n");
-  LOG_DBG("Button: %i, Battery adc: %lu..\n", btState,  adcVolt);
+  LOG_DBG("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
   
   //Initiate SPIFFS and Mount file system
   if (!SPIFFS.begin(true)){
@@ -167,6 +179,14 @@ void setup()
 
   //Initialize config class
   conf.init(appConfigDict_json);
+
+  //Replace host name mac id
+  String host_name = conf["host_name"];
+  if(host_name.indexOf("{mac}")>=0){
+    host_name.replace("{mac}", conf.getMacID());
+    conf.put("host_name", host_name);
+  }
+
   //Failed to load config or ssid empty
   if(!conf.valid() || conf["st_ssid1"]=="" ){ 
     //Start Access point server and edit config
@@ -175,26 +195,28 @@ void setup()
     ResetCountdownTimer();
     return;
   }
-  
-  //Replace host name mac id
-  String host_name = conf["host_name"];
-  if(host_name.indexOf("{mac}")>=0){
-    host_name.replace("{mac}", conf.getMacID());
-    conf.put("host_name", host_name);
-  }
-
+    
   //Initialize on board sensors
   initSensors();  
   
+  //Battery perc, and charging status.
+  data.batPerc  = calcBattery(adcVolt);
+  
   //Start ST WiFi
   connectToNetwork();
-  
+
   //Synchronize time
   syncTime();
   
+  //Connect to mqtt broker
+  mqttConnect();
+  
+  //Listen config commands
+  subscribeConfig();
+
   btState = !digitalRead(USER_BUTTON);
   //Start web server on long button press or on power connected?
-  if((onPower || btState) && pServer==NULL){
+  if(btState){
     startWebSever(); 
     ResetCountdownTimer();
   }
@@ -226,7 +248,7 @@ void loop(){
     adcVolt = analogRead(BAT_ADC); 
     
     //Reset loop millis
-    appStart = millis(); 
+    //appStart = millis(); 
     sensorReadMs = millis();
   }
 
@@ -234,8 +256,8 @@ void loop(){
   if (millis() - sleepCheckMs >= SLEEP_CHECK_INTERVAL){
     //Count down
     sleepTimerCountdown = (sleepTimerCountdown > SLEEP_CHECK_INTERVAL) ? (sleepTimerCountdown -= SLEEP_CHECK_INTERVAL) : 0L;
-    LOG_INF("Sleep count down: %lu, %x\n", sleepTimerCountdown, pServer);
-
+    
+    LOG_INF("Sleep count down: %lu\n", sleepTimerCountdown);
     if(isClientConnected(pServer)){
       LOG_DBG("No sleep, clients connected\n");
       ResetCountdownTimer();
