@@ -53,6 +53,7 @@ uint32_t readSalt()
     humi += array[i];
   }
   humi /= samples - 2;
+  LOG_DBG("Salt read: %lu\n", humi);
   return humi;
 }
 
@@ -60,7 +61,7 @@ uint32_t readSalt()
 uint8_t readSoil(){  
   uint16_t soil = analogRead(SOIL_PIN);
   uint8_t soilM = map(soil, conf["soil_min"].toInt(), conf["soil_max"].toInt(), 100, 0);
-  LOG_DBG("Soil org: %lu map: %lu\n",soil ,soilM);  
+  LOG_DBG("Soil read: %lu, map: %lu\n",soil ,soilM);  
   return soilM;
 }
 
@@ -102,9 +103,9 @@ void logSensors(){
     line +="\n";
   }
   line += data.time + sep;
-  line += String(data.temp + atof(conf["offs_temp"].c_str()), 2) + sep;
-  line += String(data.humid + atof(conf["offs_humid"].c_str()), 2) + sep;
-  line += String(data.pressure + atof(conf["offs_pressure"].c_str()), 2) + sep;
+  line += String(data.temp + atof(conf["offs_temp"].c_str()), 1) + sep;
+  line += String(data.humid + atof(conf["offs_humid"].c_str()), 1) + sep;
+  line += String(data.pressure + atof(conf["offs_pressure"].c_str()), 1) + sep;
   line += String(data.lux + atof(conf["offs_lux"].c_str()), 1) + sep;
   line += (data.soil + conf["offs_soil"].toInt()) + sep;
   line += (data.salt + conf["offs_salt"].toInt()) + sep;
@@ -152,6 +153,7 @@ void readSensors(){
   //Battery status, and charging status and days.
   data.batPerc  = calcBattery(adcVolt);
   data.batDays = calcBatteryDays();
+
   //Correction
   if(data.batPerc > 100.0F) data.batPerc = 100.0F;
 
@@ -162,7 +164,7 @@ void readSensors(){
 
   //conf.saveConfigFile(CONF_FILE);
   
-  //Send last boot values
+  //Get last boot values
   data.time = getCurDateTimeString();
   data.bootCnt = lastBoot["boot_cnt"].toInt();
   data.bootCntError = lastBoot["boot_cnt_err"].toInt();
