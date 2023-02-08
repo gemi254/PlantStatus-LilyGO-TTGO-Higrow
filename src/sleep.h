@@ -5,6 +5,10 @@ void goToDeepSleep(const char *reason, bool error=true)
 {
   clearMqttRetainMsg();
 
+  if(onPower && error){
+    LOG_INF("OnPower, not entering sleep on error\n");
+    return;
+  } 
   mqttClient.disconnect();
   
   //Disable wifi
