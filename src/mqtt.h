@@ -86,7 +86,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       conf.put(key, val);
       LOG_DBG("Update key: %s=%s\n", key.c_str(), val.c_str());
     }
-    conf.saveConfigFile(CONF_FILE);
+    conf.saveConfigFile();
   }  
 }
 

@@ -134,5 +134,5 @@ void reset(){
   LOG_DBG("Removing ini files.");
   listDir("/", 1);
   lastBoot.deleteConfig(LAST_BOOT_CONF);
-  conf.deleteConfig(CONF_FILE);
+  conf.deleteConfig();
 }

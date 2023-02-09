@@ -180,12 +180,12 @@ void setup()
   //Initialize config class
   conf.init(appConfigDict_json);
 
-  //Replace host name mac id
+  /*/Replace host name mac id
   String host_name = conf["host_name"];
   if(host_name.indexOf("{mac}")>=0){
     host_name.replace("{mac}", conf.getMacID());
     conf.put("host_name", host_name);
-  }
+  }*/
 
   //Failed to load config or ssid empty
   if(!conf.valid() || conf["st_ssid1"]=="" ){ 
