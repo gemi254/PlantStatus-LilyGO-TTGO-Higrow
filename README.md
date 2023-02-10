@@ -57,12 +57,12 @@ PlantStatus log file view
 If spiffs is running out of space Log files are **rotated** and the oldest dir will be deleted.
 Old **monthly** history can be viewed with `Logs` button. Navigate in SPIFFS Dates directories and chose a date log file. Use icons to view or download the file.
 
-PlantStatus oldeset log file view
+PlantStatus Monthly log view
 <p align="center">
   <img src="images/PlantStatus_log_dirs.png">
 </p>
 
-Remote configuration commands can be send as **retained** messages from a mosquitto broker. Messages will be delivered on next reboot,
+Remote configuration commands can be send as **retained** messages from the mosquitto broker. Messages will be delivered on next reboot,
 alter the configuration and save it to SPIFFS to be loaded on next reboot. Commands can be 
 * ``variable``=``val`` in order to set a variable to a value
 * ``variable``+=``val`` to increase or decrease value.
@@ -73,7 +73,7 @@ Fom example from a mqtt broker server publish the command with the parameter you
 
 `"offs_pressure=-2.42"` or `"offs_pressure-=.02"`
 
-``mosquitto_pub -r -h {mqtt_host} -u {mqtt_user} -P {mqtt_pass} -t "homeassistant/sensor/{host_name}-{macid}/config" -m "offs_pressure=-2.42"``
+``mosquitto_pub -r -h {mqtt_host} -u {mqtt_user} -P {mqtt_pass} -t "homeassistant/sensor/{host_name}/config" -m "offs_pressure=-2.42"``
  
  *(replace variables surrounded with {}, as needed)*
  
