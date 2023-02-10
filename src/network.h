@@ -1,291 +1,65 @@
 #define CHUNKSIZE (1024 * 4)  //Size of chunks to send in view files
-
-// Template for header, begin of the config form
-PROGMEM const char HTML_PAGE_DEF_START[] = R"=====(
-<!DOCTYPE HTML>
-<html lang='de'>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sensors of {host_name}</title>
-<style>
-:root {
- --bg-table-stripe: #f6f6f5;
- --b-table: #999a9b47;
- --caption: #242423;
-}
-body {
-  font-family: "Open Sans", sans-serif;
-  line-height: 1.25;
-}
-table {
-  border-bottom: 1px solid var(--b-table);
-  border-top: 1px solid var(--b-table);  
-  border-collapse: collapse;
-  margin: 0;
-  padding: 0;
-  table-layout: fixed;
-}
-table caption {  
-  margin: .4em 0 .35em;
-  color: var(--caption);
-}
-table tfoot{
-  padding: 5px;  
-}
-table th, table td {
-  padding: .425em;
-  border: 1px solid var(--b-table);
-}
-tbody tr:nth-of-type(2n+1) {
-  background-color: var(--bg-table-stripe)
-}
-.pair-sep{
-    text-align: center;
-    font-weight: 800;
-    font-size: 16px;
-    border-bottom: 2px solid lightgray;
-    background-color: beige;
-}
-.pair-key{
-    text-align: right;
-}
-.pair-val{
-    text-align: left;
-    font-weight: 800;
-}
-.pair-lbl{
-    text-align: left;
-    font-style: italic;}
-
-
- @media screen and (max-width: 400px) {
-  table {
-    border: 0;
-  }
-
-  table caption {
-    font-size: 1.3em;
-  }
-
-  table thead {
-    border: none;
-    clip: rect(0 0 0 0);
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    padding: 0;
-    position: absolute;
-    width: 1px;
-  }
-
-  table tr {
-    border-bottom: 3px solid #ddd;
-    display: block;
-    margin-bottom: 0.125em;
-  }
-
-  table td {
-    border-bottom: 1px solid #ddd;
-    display: block;
-    font-size: 0.8em;
-    text-align: right;
-  }
-
-  table td::before {
-    content: attr(data-label);
-    float: left;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
-
-  table td:last-child {
-    border-bottom: 0;
-  }
-  .pair-key{
-    text-align: left;    
-  }
-}
-.w-100 {
-  width: 100%!important;
-}
-button {
-    background-color: #fff;
-    border: 1px solid #d5d9d9;
-    border-radius: 4px;
-    box-shadow: rgb(213 217 217 / 50%) 0 2px 5px 0;
-    box-sizing: border-box;
-    font-weight: 900;
-    color: #0f1111;
-    cursor: pointer;
-    display: inline-block;
-    padding: 0 10px 0 11px;
-    margin: 2px;
-    line-height: 29px;
-    position: relative;
-    text-align: center;
-    vertical-align: middle;
-        
-}
-button:hover {
-    background-color: #f7fafa;
-}
-</style>
-</head>
-<script>
-/*********** WebSockets functions ***********/
-const wsServer = "ws://" + document.location.host + ":81/";
-let ws = null;
-let hbTimer = null;
-let refreshInterval = 5000;
-document.addEventListener('DOMContentLoaded', initWebSocket());
-
-// define websocket handling
-function initWebSocket() {  
-  console.log("Connect to: " + wsServer);
-  ws = new WebSocket(wsServer);
-  ws.onopen = onOpen;
-  ws.onclose = onClose;
-  ws.onmessage = onMessage; 
-  ws.onerror = onError;
-}
-function sendCmd(reqStr) {
-  ws.send(reqStr);
-  console.log("Cmd: " + reqStr);
-}
-
-// periodically check that connection is still up and get status
-function heartbeat() {
-  if (!ws) return;
-  if (ws.readyState !== 1) return;
-  sendCmd("H");
-  clearTimeout(hbTimer);
-  hbTimer = setTimeout(heartbeat, refreshInterval);
-}
-
-// connect to websocket server
-function onOpen(event) {
-  console.log("Connected");
-  //heartbeat();
-}
-
-// process received WS message
-function onMessage(messageEvent) {
-  if (messageEvent.data.startsWith("{")) {
-    // json data
-    updateData = JSON.parse(messageEvent.data);
-    updateTable(updateData); // format received config json into html table
-  } else {
-    console.log(messageEvent.data);
-  }
-
-  if(hbTimer){
-    clearTimeout(hbTimer);
-    hbTimer = setTimeout(heartbeat, refreshInterval);
-  }
-}
-
-function valueUnits(key){
+// Get a param units
+String valueUnits(String key, bool u = true){
   if(key=="lux"){
-    return " lx";
+    return u ? " lx":    "Luminosity";
   }else if(key=="temp"){
-    return " °C";
-  }else if(key=="humid" || key=="batPerc"){
-    return " %";
+    return u ? " °C" :   "Temperature";
+  }else if(key=="humid"){
+    return u ? " %":     "Humidity";
+  }else if(key=="batPerc"){    
+    return u ? " %":     "Battery";
   }else if(key=="pressure"){
-    return " hPa";
+    return u ? " hPa":   "Pressure";
+  }else if(key=="soil"){
+    return u ? " %":     "Soil moisture";
+  }else if(key=="salt"){
+    return u ? " µS/cm": "Soil conductivity";
   }else if(key=="RSSI"){
-    return " dBm";    
-  }else if(key=="batVolt"){
-    return " Volt";    
+    return u ? " dBm":   "Signal";
   }else if(key=="batDays"){
-    return " days";    
+   return u ? " days":   "Battery Days";    
+  }else if(key=="time"){
+   return u ? "":        "Date/Time";    
+  }else if(key=="sensorName"){
+   return u ? "":        "Name";    
+  }else if(key=="BatDays"){
+   return u ? "":        "Battery days";    
+  }else if(key=="batVolt"){
+   return u ? " Volt":   "Battery voltage";    
+  }else if(key=="batChargeDate"){
+   return u ? "":        "Last charged";    
   }
-  return "";
-}
-function updateTable(configData){
-  Object.entries(configData).forEach(([key, value]) => {
-    const td = document.getElementById(key)
-    if(td) td.innerHTML = value + valueUnits(key);
-  });
+  return u ? "" : key;
 }
 
-function onError(event) {
-  console.log("WS Error: " + event.code);
+// Get a param svg
+const char* valueSVG(String key){
+  if(key=="lux"){
+    return HTML_PAGE_SVG_SUN;
+  }else if(key=="temp" || key=="pressure"){
+    return HTML_PAGE_SVG_THERMOMETER;
+  }else if(key=="humid"){
+    return HTML_PAGE_SVG_RAIN;
+  }else if(key=="soil"){
+    return HTML_PAGE_SVG_PERC_DROP; 
+  }else if(key=="salt"){
+    return HTML_PAGE_SVG_EYE;
+  }else if(key=="time"){
+    return HTML_PAGE_SVG_CLOCK;
+  }
+  return NULL;
 }
-
-function onClose(event) {
-  console.log("Disconnected: " + event.code + ' - ' + event.reason);
-  ws = null;
-  // event.codes:
-  //   1006 if server not available, or another web page is already open
-  //   1005 if closed from app
-  if (event.code == 1006) {} //alert("Closed websocket as a newer connection was made, refresh browser page");
-  else if (event.code != 1005) initWebSocket(); // retry if any other reason
+//Is device main sensor
+bool isSensor(String key){
+  if(key == "lux" || key== "temp" || key == "pressure" || key == "humid" ||
+     key == "soil"|| key =="salt" || key == "time")
+    return  true;
+  return false;
 }
-</script>        
-<body>
-<center>
-    <div class="w-100">
-      <table>
-        <caption>
-          <h3>{host_name} status</h3>
-        </caption>
-        <tbody>
-)=====";
-// Template for one line
-PROGMEM const char HTML_PAGE_DEF_LINE[] = R"=====(
-        <tr>
-          <td scope="row" class="pair-key">{key}</td>
-          <td class="pair-val" id="{key}">{val}</td>    
-        </tr>    
-)=====";
-
-// Template for page end
-PROGMEM const char HTML_PAGE_DEF_END[] = R"=====(
-      </tbody>
-          <tfoot>
-            <tr>
-              <td style="text-align: center;" colspan="5">
-              <button title='View sensors daily log' onClick='window.location.href="/cmd?view="'>Day</button>
-              <button title='View sensors monthly logs' onClick='window.location.href="/fs?dir=/data"'>Logs</button>
-              <button title='Send device mqtt discovery message to Homeassistant' onClick='window.location.href="/cmd?hasDiscovery=1"'>Discover</button>
-              <button title='Configure this device' onClick='window.location.href="/cfg"'>Configure</button>
-              <button title='Reboot device' onClick='window.location.href="/cmd?reboot=1"'>Reboot</button>
-              <button title='Factory defaults' onClick='window.location.href="/cmd?reset=1"'>Reset</button>
-            </tr>
-          </tfoot>
-        </table>
-        </br>
-        <span><small>PlantStatus Ver: {appVer}</small></span>
-      </div>
-</center>
-</body>
-</html>
-)=====";
-
-
-//Back button
-PROGMEM const char HTML_BACK_SCRIPT[] = R"~(
-<small><a href="" onClick="window.history.go(-1); return false;">[&nbsp;Back&nbsp;]</a></small>
-)~";
-
-// Ping script
-PROGMEM const char HTML_PING_SCRIPT[] = R"~(
-<script>
-function ping(){
-  const Http = new XMLHttpRequest();
-  const url='/pg';
-  Http.open("GET", url);
-  Http.send();
-}
-setInterval(ping, 10000);
-</script>
-)~";
 
 // Connect to a SIID network
-void connectToNetwork(){
-  
+void connectToNetwork(){  
   WiFi.mode(WIFI_STA);
   //WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE); // call is only a workaround for bug in WiFi class
   WiFi.setHostname(conf["host_name"].c_str());
@@ -325,29 +99,37 @@ void connectToNetwork(){
 String getJsonBuff();
 void mqttSetupDevice(String chipId);
 
-String valueUnits(String key){
-  if(key=="lux"){
-    return  " lx";
-  }else if(key=="temp"){
-    return " °C";
-  }else if(key=="humid" || key=="batPerc"){
-    return " %";
-  }else if(key=="pressure"){
-    return " hPa";
-  }else if(key=="RSSI"){
-    return " dBm";    
-  }else if(key=="batVolt"){
-    return " Volt";    
-  }else if(key=="batDays"){
-    return " days";    
-  }
-  return "";
+//Get one line html string
+String getLineHtml(JsonPair kv){
+  String line(HTML_PAGE_HOME_LINE);
+  const char *key = kv.key().c_str();
+  line.replace("{key}", key);
+  String svg(valueSVG(key));
+  line.replace("{svg}", svg.c_str());
+  String name = valueUnits(key, false);
+  line.replace("{name}", name.c_str());
+  String units = valueUnits(key);
+  line.replace("{units}", units.c_str());
+  //Value type?
+  if(kv.value().is<bool>())
+    line.replace("{val}", String(kv.value().as<bool>()));
+  else if(kv.value().is<int>())
+    line.replace("{val}", String(kv.value().as<int>()));
+  else if(kv.value().is<long>())
+    line.replace("{val}", String(kv.value().as<long>()));
+  else if(kv.value().is<float>())
+    line.replace("{val}", String(kv.value().as<float>(),1));
+  else if(kv.value().is<double>())
+    line.replace("{val}", String(kv.value().as<double>(), 1));
+  else if(kv.value().is<const char*>())
+    line.replace("{val}", String(kv.value().as<const char*>()));
+  return line;
 }
+
 // Handler function for root of the web page 
 static void handleRoot(){
   //Read on each refresh
   //readSensors();
-
   String jsonBuff = getJsonBuff();
   DeserializationError error;
   DynamicJsonDocument doc(1024);
@@ -358,33 +140,36 @@ static void handleRoot(){
     return;
   }
   JsonObject root = doc.as<JsonObject>();
-  String out(HTML_PAGE_DEF_START);
+  String out(HTML_PAGE_HOME_START);
   out.replace("{host_name}",conf["host_name"]);
+  out.replace("{plant_name}",conf["plant_name"]);
+  
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   pServer->sendContent(out);
+  
+  pServer->sendContent(HTML_PAGE_HOME_SCRIPT);
+  out = HTML_PAGE_HOME_BODY;
+  out.replace("{host_name}",conf["host_name"]);
+  out.replace("{plant_name}",conf["plant_name"]);
+  pServer->sendContent(out);
+
   for (JsonPair kv : root) {
-      String line(HTML_PAGE_DEF_LINE);
-      line.replace("{key}", kv.key().c_str());
-      String units = valueUnits(kv.key().c_str());
-      //Value type?
-      if(kv.value().is<bool>())
-        line.replace("{val}", String(kv.value().as<bool>()) + units);
-      else if(kv.value().is<int>())
-        line.replace("{val}", String(kv.value().as<int>()) + units);
-      else if(kv.value().is<long>())
-        line.replace("{val}", String(kv.value().as<long>()) + units);
-      else if(kv.value().is<float>())
-        line.replace("{val}", String(kv.value().as<float>(),1) + units);
-      else if(kv.value().is<double>())
-        line.replace("{val}", String(kv.value().as<double>(), 1) + units);
-      else if(kv.value().is<const char*>())
-        line.replace("{val}", String(kv.value().as<const char*>()) + units);
+    if(!isSensor(kv.key().c_str())) continue;
+      String line = getLineHtml(kv);
       pServer->sendContent(line);
   }
-  String end(HTML_PAGE_DEF_END);
+  String sep(HTML_PAGE_HOME_SEP);
+  pServer->sendContent(sep);
+  for (JsonPair kv : root) {
+    if(isSensor(kv.key().c_str())) continue;
+      String line = getLineHtml(kv);
+      pServer->sendContent(line);
+  }
+
+  String end(HTML_PAGE_HOME_END);
   end.replace("{appVer}", APP_VER );
   pServer->sendContent(end);
-  pServer->sendContent(HTML_PING_SCRIPT);
+  //pServer->sendContent(HTML_PING_SCRIPT);
   pServer->client().flush(); 
   ResetCountdownTimer();
 }
