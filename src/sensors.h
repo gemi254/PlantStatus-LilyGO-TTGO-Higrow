@@ -176,4 +176,3 @@ void readSensors(){
   //Next auto reading reset
   sensorReadMs = millis();
 }
-
