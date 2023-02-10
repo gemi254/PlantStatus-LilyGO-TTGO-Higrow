@@ -17,6 +17,10 @@ and the internal **soil moisture** and **soil salt** sensor.
 + Battery optimization.
 + Mqtt **remote configure** commands and wakeup function.
 
+PlanStatus home page.
+<p align="center">
+  <img src="images/PlantStatus.png">
+</p>
 
 ## Install
 Compile the project using **platformio** or you can download the already compiled firmware from **/firmware** folder 
@@ -79,11 +83,10 @@ Fom example from a mqtt broker server publish the command with the parameter you
  
 After disconnecting your browser, **device** will automatically enter to deep sleep again to preserve battery.
 
-PlanStatus home page.
+PlanStatus info card.
 <p align="center">
-  <img src="images/PlantStatus.png">
+  <img src="images/PlantStatus_info.png">
 </p>
-
 PlantStatus config page
 <p align="center">
   <img src="images/PlantStatus_config.png">
