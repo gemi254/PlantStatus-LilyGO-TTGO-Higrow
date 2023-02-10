@@ -27,7 +27,8 @@
 #include "user-variables.h"
 
 
-#define APP_VER "1.0.4"   // Replace mac id, No sleep onPower and error
+#define APP_VER "1.0.5"   // User interface using css cards.
+//#define APP_VER "1.0.4" // Replace mac id, No sleep onPower and error
 //#define APP_VER "1.0.3" // View file system logs, truncate values, Added values units, Rotate log files
 //#define APP_VER "1.0.2" // Websockets to update, mqtt command to remote setup.
 //#define APP_VER "1.0.1" // Added log sensors to a daily csv file, View the log from main page.
@@ -77,7 +78,6 @@ struct SensorData
   float batDays;
   float pressure;
 };
-
 SensorData data;
 
 // Ntp sync?
@@ -88,11 +88,13 @@ unsigned long appStart;
 RTC_DATA_ATTR int bootCnt = 0;
 RTC_DATA_ATTR int bootCntError = 0;
 uint16_t adcVolt = 0;
+
 // Timers
 unsigned long sleepTimerCountdown = 2000; //Going to sleep timer
 unsigned long sensorReadMs = millis() + SENSORS_READ_INTERVAL;    //Sensors read inteval
 unsigned long sleepCheckMs = millis();    //Check for sleep interval
 unsigned long btPressMs = 0;              //Button pressed ms
+
 // Bool vars
 bool bmeFound = false;
 bool dhtFound = false;
@@ -136,6 +138,7 @@ ConfigAssist lastBoot;           //Save last boot vars
 #include <sleep.h>
 #include <battery.h>
 #include <sensors.h>
+#include <appPmem.h>
 #include <network.h>
 #include <mqtt.h>
 
