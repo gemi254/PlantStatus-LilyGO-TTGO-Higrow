@@ -41,121 +41,69 @@ PROGMEM const char HTML_PAGE_SVG_CLOCK[] = R"=====(
               </g>
               </svg>
 )=====";
+
+PROGMEM const char HTML_PAGE_SVG_FOLDER[] = R"=====(
+<svg class="icon" width="18px" height="18px" viewBox="0 0 48 48">
+    <path style="line-height:normal;text-indent:0;text-align:start;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000;text-transform:none;block-progression:tb;isolation:auto;mix-blend-mode:normal" d="M 5 4 C 3.3544268 4 2 5.3555411 2 7 L 2 16 L 2 26 L 2 43 C 2 44.644459 3.3544268 46 5 46 L 45 46 C 46.645063 46 48 44.645063 48 43 L 48 26 L 48 16 L 48 11 C 48 9.3549372 46.645063 8 45 8 L 18 8 C 18.08657 8 17.96899 8.000364 17.724609 7.71875 C 17.480227 7.437136 17.179419 6.9699412 16.865234 6.46875 C 16.55105 5.9675588 16.221777 5.4327899 15.806641 4.9628906 C 15.391504 4.4929914 14.818754 4 14 4 L 5 4 z M 5 6 L 14 6 C 13.93925 6 14.06114 6.00701 14.308594 6.2871094 C 14.556051 6.5672101 14.857231 7.0324412 15.169922 7.53125 C 15.482613 8.0300588 15.806429 8.562864 16.212891 9.03125 C 16.619352 9.499636 17.178927 10 18 10 L 45 10 C 45.562937 10 46 10.437063 46 11 L 46 13.1875 C 45.685108 13.07394 45.351843 13 45 13 L 5 13 C 4.6481575 13 4.3148915 13.07394 4 13.1875 L 4 7 C 4 6.4364589 4.4355732 6 5 6 z M 5 15 L 45 15 C 45.56503 15 46 15.43497 46 16 L 46 26 L 46 43 C 46 43.562937 45.562937 44 45 44 L 5 44 C 4.4355732 44 4 43.563541 4 43 L 4 26 L 4 16 C 4 15.43497 4.4349698 15 5 15 z" color="#000" font-weight="400" font-family="sans-serif" white-space="normal" overflow="visible"/>
+</svg>
+)=====";
+
+// Download icon
+PROGMEM const char HTML_PAGE_SVG_DOWNLOAD[] = R"=====(
+<svg class="icon" width="18px" height="18px" viewBox="0 0 16 16">
+    <path style="line-height:normal;text-indent:0;text-align:start;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000;text-transform:none;block-progression:tb;isolation:auto;mix-blend-mode:normal" d="M 7 2 L 7 9.2929688 L 4.3535156 6.6464844 L 3.6464844 7.3535156 L 7.5 11.207031 L 11.353516 7.3535156 L 10.646484 6.6464844 L 8 9.2929688 L 8 2 L 7 2 z M 3 13 L 3 14 L 3.5 14 L 11.5 14 L 12 14 L 12 13 L 11.5 13 L 3.5 13 L 3 13 z" font-weight="400" font-family="sans-serif" white-space="normal" overflow="visible"/>
+</svg>
+)=====";
+// Delete icon
+PROGMEM const char HTML_PAGE_SVG_RECYCLE[] = R"=====(
+<svg class="icon" width="18px" height="18px" viewBox="0 0 16 16">
+    <path d="M 8 1.0078125 C 7.4059332 1.0078125 6.8120113 1.2861012 6.4609375 1.8417969 L 4.703125 4.6074219 L 5.546875 5.1425781 L 7.3046875 2.375 L 7.3066406 2.375 C 7.6304931 1.8623914 8.3695069 1.8623914 8.6933594 2.375 L 8.6992188 2.3828125 L 10.664062 5.2265625 L 9.125 6.5292969 L 13 7 L 13 3.25 L 11.431641 4.578125 L 9.5390625 1.8417969 C 9.1879887 1.2861012 8.5940668 1.0078125 8 1.0078125 z M 5 6 L 1.1542969 6.6835938 L 2.6484375 7.875 L 1.3027344 10.001953 C 0.48952535 11.288542 1.4732671 13 3 13 L 6 13 L 6 12 L 3 12 C 2.1907329 12 1.7316465 11.19652 2.1484375 10.537109 L 3.4355469 8.5019531 L 5 9.75 L 5 6 z M 13.351562 7.7441406 L 12.492188 8.2558594 L 13.849609 10.53125 L 13.851562 10.537109 C 14.269434 11.19823 13.817652 11.998047 13.007812 11.998047 L 10 11.998047 L 10 10 L 7 12.5 L 10 15 L 10 12.998047 L 13.007812 12.998047 C 14.533976 12.998047 15.509394 11.286832 14.697266 10.001953 L 13.351562 7.7441406 z"/>
+</svg>
+)=====";
+// Flower icon
+PROGMEM const char HTML_PAGE_SVG_FLOWER[] = R"=====(
+<svg class="icon" width="18px" height="18px" viewBox="0 0 16 16">
+<path style="line-height:normal;text-indent:0;text-align:start;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000;text-transform:none;block-progression:tb;isolation:auto;mix-blend-mode:normal" d="M 2.5 2 C 1.6774686 2 1 2.6774686 1 3.5 L 1 4 L 1 5 L 1 12.5 C 1 13.322531 1.6774686 14 2.5 14 L 13.5 14 C 14.322531 14 15 13.322531 15 12.5 L 15 5.5 C 15 4.6774686 14.322531 4 13.5 4 L 6.7988281 4 L 6.1445312 2.7871094 C 5.8835911 2.3027204 5.3751898 2 4.8242188 2 L 2.5 2 z M 2.5 3 L 4.8242188 3 C 5.0092476 3 5.176612 3.1001077 5.2636719 3.2617188 L 5.6621094 4 L 2 4 L 2 3.5 C 2 3.2185314 2.2185314 3 2.5 3 z M 2 5 L 7.3378906 5 L 13.5 5 C 13.781469 5 14 5.2185314 14 5.5 L 14 12.5 C 14 12.781469 13.781469 13 13.5 13 L 2.5 13 C 2.2185314 13 2 12.781469 2 12.5 L 2 5 z" font-weight="400" font-family="sans-serif" white-space="normal" overflow="visible"/>
+</svg>
+)=====";
+
 // Template for header, begin of the config form
 PROGMEM const char HTML_PAGE_HOME_START[] = 
 R"=====(<!DOCTYPE HTML>
-<html lang='de'>
+<html lang='en'>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sensors of {host_name}</title>
+<title>{page_title}</title>)=====";
+
+PROGMEM const char HTML_PAGE_HOME_CSS[] = 
+R"=====(
 <style>
 :root {
- --bg-table-stripe: #f6f6f5;
- --b-table: #999a9b47;
  --caption: cornflowerblue;
 }
-body {
-	font-family: Arial, Helvetica, sans-serif;
-}
-.column {
-	float: center;
-	width: 100%;
-	padding: 0 10px;
-	box-sizing: border-box;
-  margin-top: 10px;
-}
-.row {
-	margin: 0 -5px;
-}
-/* Clear floats after the columns */
-.row:after {
-	content: "";
-	display: table;
-	clear: both;
-}
-/* Responsive columns */
-@media screen and (max-width: 600px) {
-.column {
-	width: 100%;
-	display: block;
-	margin-bottom: 20px;
-  margin-top: 2px;
-}
-}
-.column .card.closed{
-    height: 30px;
-    overflow: hidden;
-}
-.card {
-	box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
-	padding: 10px;
-	text-align: center;
-	background-color: #ffffff;
-	margin-bottom: 15px;
-	border-radius: 5px;
-}
-.card h3{
-	margin:2px;
-}
-.card h2{
-	margin-top:2px;
-	margin-bottom:8px;
-	color: var(--caption);
-}
-.container {
-	display: flex;
-	justify-content: center;
-	flex-direction: row;
-}
-table {
-	width: 100%;
-}
-table th, table td {
-	padding: .325em;
-	border: 1px solid var(--b-table);
-}
-tbody tr:nth-of-type(2n+1) {
-	background-color: var(--bg-table-stripe)
+.column .card.closed {
+  height: 28px;
 }
 .card-key {
 	text-align: right;
+  width: auto;
+  color: lightslategray;
 }
 .card-val {
-	text-align: left;
+	width: auto;
 	font-weight: 800;
   color: midnightblue;
   font-size: 1.2em;
 }
-.card-lbl {
-	text-align: left;
-	font-style: italic;
-}
 .card-icon {
 	width: 70px;
 }
-button {
-	background-color: #fff;
-	border: 1px solid #d5d9d9;
-	border-radius: 4px;
-	box-shadow: rgb(213 217 217 / 50%) 0 2px 5px 0;
-	box-sizing: border-box;
-	font-weight: 900;
-	color: #0f1111;
-	cursor: pointer;
-	display: inline-block;
-	padding: 0 10px 0 11px;
-	margin: 2px;
-	line-height: 29px;
-	position: relative;
-	text-align: center;
-	vertical-align: middle;
+.icon:hover {
+  fill: cadetblue;
 }
-button:hover {
-	background-color: #f7fafa;
-}
-</style>
-</head> )=====";
+</style>)=====";
+
 //Scripts to handle websockets
 PROGMEM const char HTML_PAGE_HOME_SCRIPT[] = R"=====(
 <script>
@@ -242,8 +190,29 @@ function onClose(event) {
 }
 </script>  )=====";
 
+// Template for simple page body
+PROGMEM const char HTML_PAGE_SIMPLE_BODY[] = R"=====(
+</head>
+<body>
+<div class="container">
+  <div class="row" style="min-width: 50%;">
+    <div class="column">
+      <div class="card">
+)=====";
+
+// Template for simple page body end
+PROGMEM const char HTML_PAGE_SIMPLE_BODY_END[] = R"=====(
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+)=====";
+
 // Template html body
 PROGMEM const char HTML_PAGE_HOME_BODY[] = R"=====(
+</head>
 <body>
 <div class="container">
   <div class="row">
@@ -255,6 +224,7 @@ PROGMEM const char HTML_PAGE_HOME_BODY[] = R"=====(
         <table>
           <h2><font style="color: mediumblue;">{plant_name}</font> sensors</h2>
 )=====";
+
 // Template for one line
 PROGMEM const char HTML_PAGE_HOME_LINE[] = R"=====(
           <tr>
@@ -263,6 +233,8 @@ PROGMEM const char HTML_PAGE_HOME_LINE[] = R"=====(
             <td class="card-val"><span id="{key}">{val}</span>&nbsp;<font color='lightskyblue'>{units}</font>&nbsp;<span id="{key}_inc"></span></td>
           </tr>
 )=====";
+
+//Seperator
 PROGMEM const char HTML_PAGE_HOME_SEP[] = R"=====(
         </table> 
       </div>
@@ -270,36 +242,37 @@ PROGMEM const char HTML_PAGE_HOME_SEP[] = R"=====(
         <h2>Device Information</h2>
         <table>     
 )=====";
+
 // Template for page end
 PROGMEM const char HTML_PAGE_HOME_END[] = R"=====(
       </table>
       </div>
       <div class="card">
-       <table>
-            <tr>
-              <td style="text-align: center;" colspan="5">
-              <button title='View sensors daily log' onClick='window.location.href="/cmd?view="'>Day</button>
-              <button title='View sensors monthly logs' onClick='window.location.href="/fs?dir=/data"'>Logs</button>
-              <button title='Send device mqtt discovery message to Homeassistant' onClick='window.location.href="/cmd?hasDiscovery=1"'>Discover</button>
-              <button title='Configure this device' onClick='window.location.href="/cfg"'>Configure</button>
-              <button title='Reboot device' onClick='window.location.href="/cmd?reboot=1"'>Reboot</button>
-              <button title='Factory defaults' onClick='window.location.href="/cmd?reset=1"'>Reset</button>
-          </tr>
-        </table>
+        <button title='View sensors daily log' onClick="window.open('/cmd?view=', '_blank');">Day</button>
+        <button title='View sensors monthly logs' onClick='window.location.href="/fs?dir=/data"'>Logs</button>
+        <button title='Send device mqtt discovery message to Homeassistant' onClick='window.location.href="/cmd?hasDiscovery=1"'>Discover</button>
+        <button title='Configure this device' onClick='window.location.href="/cfg"'>Configure</button>
+        <button title='Reboot device' onClick='window.location.href="/cmd?reboot=1"'>Reboot</button>
+        <button title='Factory defaults' onClick='window.location.href="/cmd?reset=1"'>Reset</button>
       </div>
     </div>
   </br>
-  <center><small>PlantStatus Ver: {appVer}</small></center>
+  <center><small style="color: lightgray;">PlantStatus Ver: {appVer}</small></center>
   </div>
 </div>
 </body>
 </html>
 )=====";
 
-//Back button
-PROGMEM const char HTML_BACK_SCRIPT[] = R"~(
-<small><a href="" onClick="window.history.go(-1); return false;">[&nbsp;Back&nbsp;]</a></small>
+//Back link
+PROGMEM const char HTML_BACK_BUTTON[] = R"~(
+<button type='button' onClick="window.history.go(-1); return false;">Back</button>
 )~";
+//Home button
+PROGMEM const char HTML_HOME_BUTTON[] = R"~(
+<button type='button' title='Return to home page' onClick='window.location.href="/"' name='Home'>Home</button>
+)~";
+
 
 // Ping script
 PROGMEM const char HTML_PING_SCRIPT[] = R"~(
