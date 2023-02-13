@@ -76,10 +76,11 @@ Old **monthly** history can be viewed with `Logs` button. Navigate in SPIFFS Dat
   <br>
   PlantStatus Daily log view
 </p>
-Remote configuration commands can be send as **retained** messages from the mosquitto broker. Messages will be delivered on next reboot,
+
+Remote **configuration commands** can be send as **retained** messages from the **mosquitto broker**. Messages will be delivered on next reboot,
 alter the configuration and save it to SPIFFS to be loaded on next reboot. Commands can be 
-* ``variable``=``val`` in order to set a variable to a value
-* ``variable``+=``val`` to increase or decrease value.
+* `variable=val` in order to set a variable to a value
+* `variable+=val` to increase or decrease value.
 
 Valid parameters names with default values are defined in `include/user-variables.h`  line: 27 const char* appConfigDict_json 
 
@@ -91,7 +92,7 @@ Fom example from a mqtt broker server publish the command with the parameter you
  
  *(replace variables surrounded with {}, as needed)*
  
-After disconnecting your browser, **device** will automatically enter to deep sleep again to preserve battery.
+After disconnecting your browser, **device** will automatically enter to **deep sleep** again to preserve battery.
 
 <p align="center">
   <img src="images/PlantStatus_info.png">
