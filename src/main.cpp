@@ -27,7 +27,8 @@
 #include "user-variables.h"
 
 
-#define APP_VER "1.0.5"   // User interface using css cards.
+#define APP_VER "1.0.6"   // File system using cards, Update config assist
+//#define APP_VER "1.0.5" // User interface using css cards.
 //#define APP_VER "1.0.4" // Replace mac id, No sleep onPower and error
 //#define APP_VER "1.0.3" // View file system logs, truncate values, Added values units, Rotate log files
 //#define APP_VER "1.0.2" // Websockets to update, mqtt command to remote setup.
