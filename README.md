@@ -17,9 +17,10 @@ and the internal **soil moisture** and **soil salt** sensor.
 + Battery optimization.
 + Mqtt **remote configure** commands and wakeup function.
 
-PlanStatus home page.
 <p align="center">
   <img src="images/PlantStatus.png">
+  <br>
+  PlanStatus home page.
 </p>
 
 ## Install
@@ -45,27 +46,36 @@ To **re-configure** device press `configure` button from homepage end redirect t
 To make device visible in **Home Assistant** press the`Discovery` button from home page. A mqtt **auto discovery** messages will be send to Home assistant
 to configure **PlantStatus** as a mqtt device. Visit **HAS devices** page to see the new **T-HIGROW** MQTT device.
 
-Home Assistand Mqtt card & device
-<p align="left">
+<p align="center">
   <img src="images/homeassistan_card.png">
-   <img src="images/homeassistant_device.png">
+  <img src="images/homeassistant_device.png">
+  <br>
+  Home Assistand Mqtt card & device
 </p>
 
 **Active** daily log file can be viewed in the browser by button `Daily` in home page. 
 
-PlantStatus log file view
 <p align="center">
   <img src="images/PlantStatus_log.png">
+  <br>
+  PlantStatus log file view
 </p>
 
 If spiffs is running out of space Log files are **rotated** and the oldest dir will be deleted.
 Old **monthly** history can be viewed with `Logs` button. Navigate in SPIFFS Dates directories and chose a date log file. Use icons to view or download the file.
 
-PlantStatus Monthly log view
+
 <p align="center">
   <img src="images/PlantStatus_log_dirs.png">
+  <br>
+  PlantStatus Monthly log view
 </p>
 
+<p align="center">
+  <img src="images/PlantStatus_log_dirs_dates.png">
+  <br>
+  PlantStatus Daily log view
+</p>
 Remote configuration commands can be send as **retained** messages from the mosquitto broker. Messages will be delivered on next reboot,
 alter the configuration and save it to SPIFFS to be loaded on next reboot. Commands can be 
 * ``variable``=``val`` in order to set a variable to a value
@@ -83,12 +93,14 @@ Fom example from a mqtt broker server publish the command with the parameter you
  
 After disconnecting your browser, **device** will automatically enter to deep sleep again to preserve battery.
 
-PlanStatus info card.
 <p align="center">
   <img src="images/PlantStatus_info.png">
+  <br>
+  PlanStatus info card.
 </p>
-PlantStatus config page
+
 <p align="center">
+   PlantStatus config page
   <img src="images/PlantStatus_config.png">
 </p>
 
