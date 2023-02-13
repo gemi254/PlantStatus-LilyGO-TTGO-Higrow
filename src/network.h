@@ -141,12 +141,14 @@ static void handleRoot(){
   }
   JsonObject root = doc.as<JsonObject>();
   String out(HTML_PAGE_HOME_START);
-  out.replace("{host_name}",conf["host_name"]);
+  
+  out.replace("{page_title}","Sensors of "+ conf["host_name"]);
   out.replace("{plant_name}",conf["plant_name"]);
   
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   pServer->sendContent(out);
-  
+  pServer->sendContent(CONFIGASSIST_HTML_CSS);
+  pServer->sendContent(HTML_PAGE_HOME_CSS);
   pServer->sendContent(HTML_PAGE_HOME_SCRIPT);
   out = HTML_PAGE_HOME_BODY;
   out.replace("{host_name}",conf["host_name"]);
@@ -217,7 +219,7 @@ static void handleCmd(){
   //WebServer::args() ignores empty parameters 
   for (int i = 0; i < pServer->args(); i++) {
     LOG_DBG("Cmds received: [%i] %s, %s \n",i, pServer->argName(i), pServer->arg(i).c_str()  );
-    String out(HTML_PAGE_MESSAGE);
+    String out(CONFIGASSIST_HTML_MESSAGE);
     out.replace("{url}", "/");
     out.replace("{refresh}", "3000");
     String cmd(pServer->argName(i));    
@@ -289,43 +291,66 @@ static void handleFileSytem(){
   
   listSortedDir(dir, dirArr, fileArr );
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
-  pServer->sendHeader("Content-Type", "text/html");
-  String out ="";
+
+  String out = HTML_PAGE_HOME_START;
+  out.replace("{page_title}", "Directory: " + dir);
+  pServer->sendContent(out);
+  out ="";
+  pServer->sendContent(CONFIGASSIST_HTML_CSS);
+  pServer->sendContent(HTML_PAGE_SIMPLE_BODY);
   out += "<style> a { text-decoration: none; }</style>\n";
   out += "Directory: <b>" + dir + "</b></br></br>\n";
+  pServer->sendContent(out);
+  out = "<table>";
   uint8_t row = 0;
   while (row++ < dirArr.size()) { 
     String d = dirArr[row - 1];    
     if(row==1){
       String up = d.substring( 0, d.lastIndexOf("/") );
-      if(up != "" && up != dir)  out += "<a href='/fs?dir=" + up + "'><b>[ .. ]</b></a></br>\n";
+      if(up != "" && up != dir){
+        out += "<tr><td colspan='5'><a href='/fs?dir=" + up + "'><b>[ .. ]</b></a></td>";
+        out += "</tr>\n";
+      } 
     }
-    if(d!=dir) out += "<a href='/fs?dir=" + d + "'><b>[ " + d + " ]</b></a></br>\n";
-    pServer->sendContent(out.c_str(), out.length());
+    if(d!=dir){
+      out += "<tr><td><a href='/fs?dir=" + d + "'>" + String(HTML_PAGE_SVG_FOLDER) + "</a></td>";
+      out += "<td style='text-align: left;'><a href='/fs?dir=" + d + "'><b> " + d + "</b></a></td></tr>\n";
+      
+    } 
+    pServer->sendContent(out);
     out = "";
   }
+  out = "</table>";
+  pServer->sendContent(out);
   row=0;
   while (row++ < fileArr.size()) { 
     String f = fileArr[row - 1][0];
     String s = fileArr[row - 1][1];
     out="";
-    if(row==1) out+="</br>";
-    out += "<a title='View' href='/cmd?view=" + dir + "/" + f + "'><b>" + f + "&nbsp;&nbsp" + s + " Kb</b></a>&nbsp;&nbsp;&nbsp;";
-    out += "<a title='Download' href='/cmd?download=" + dir + "/" + f + "'>[ Down ]</a>&nbsp;";
+    if(row==1) out+="<table>";
+    out += "<tr>";
+    out += "<td><a target='_blank;' title='View' href='/cmd?view=" + dir + "/" + f + "'><b>" + f + "</b></a></td><td>&nbsp;&nbsp" + s + " Kb</td>\n";
+    out += "<td><a title='Download' href='/cmd?download=" + dir + "/" + f + "'>" + HTML_PAGE_SVG_DOWNLOAD + "</a></td>\n";
     #if defined(DEBUG_FILES)
-      out += "<a title='Delete' href='/cmd?del=" + dir + "/" + f + "'>[ Del ]</a>\n";
+      out += "<td><a title='Delete' href='/cmd?del=" + dir + "/" + f + "'>"+ HTML_PAGE_SVG_RECYCLE +"</a></td>\n";
     #endif
-    out += "</br>";
-    pServer->sendContent(out.c_str(), out.length());
+    out += "</tr>";
+    pServer->sendContent(out);
   }
+  out = "</table></br>";
+  if(dir == DATA_DIR)
+    out += "</br>" + String(HTML_HOME_BUTTON);  
+  else 
+    out += "</br>" + String(HTML_BACK_BUTTON);  
+  pServer->sendContent(out);
+  out = "</br></br>";
   size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
-  out = "</br>";
   out += "<small>Total space: " + String(STORAGE.totalBytes() / 1024) + " K, ";  
   out += "Used: " + String(STORAGE.usedBytes() / 1024) + " K, ";  
   out += "Free: " + String(free / 1024) + " K</small></br>";  
-  out += "</br>" + String(HTML_BACK_SCRIPT);
-  out += "</br>" + String(HTML_PING_SCRIPT);
-  pServer->sendContent(out.c_str(), out.length());  
+  out += "" + String(HTML_PING_SCRIPT);
+  pServer->sendContent(out);
+  pServer->sendContent(HTML_PAGE_SIMPLE_BODY_END);
   pServer->client().flush(); 
 }
 
