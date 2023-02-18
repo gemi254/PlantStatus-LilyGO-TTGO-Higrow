@@ -37,7 +37,11 @@ const char* appConfigDict_json PROGMEM = R"~(
     "label": "Can be DHT11, DHT12, DHT22 or BME280",
   "options": "'BMP280', 'DHT12', 'DHT21', 'DHT22'",  
   "default": "BME280" 
-},{
+ },{
+     "name": "logFile",
+    "label": "Check to enable logging into a text file",
+  "checked": "False"
+},{  
 "seperator": "Sensors calibration"
 },{
      "name": "soil_min",
