@@ -26,8 +26,8 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-
-#define APP_VER "1.0.6"   // File system using cards, Update config assist
+#define APP_VER "1.0.7"   // Generate log file to debug.
+//#define APP_VER "1.0.6" // File system using cards, Update config assist
 //#define APP_VER "1.0.5" // User interface using css cards.
 //#define APP_VER "1.0.4" // Replace mac id, No sleep onPower and error
 //#define APP_VER "1.0.3" // View file system logs, truncate values, Added values units, Rotate log files
@@ -105,6 +105,11 @@ static String chipID;              //Wifi chipid
 static String topicsPrefix;        //Subscribe to topics
 static uint8_t apClients = 0;      //Connected ap clients
 
+// Log to file
+#define LOG_FILENAME "/log"
+bool logFile = false;
+File logF;                         
+
 // User button
 bool btPress = false;
 bool btState = false;
@@ -163,14 +168,25 @@ void setup()
   Serial.begin(230400);
   Serial.print("\n\n\n\n");
   Serial.flush();
-  LOG_INF("Starting..\n");
-  LOG_DBG("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
-  
   //Initiate SPIFFS and Mount file system
   if (!SPIFFS.begin(true)){
     LOG_ERR("Error mounting SPIFFS\n");
   }
-
+  
+  //Enable logging
+  logFile  = conf["logFile"];
+  if(logFile){
+    logF = STORAGE.open(LOG_FILENAME, FILE_APPEND);
+    if( !logF ) {
+      Serial.printf("Failed to open log %s\n", LOG_FILENAME);
+      logFile = false;
+    }else{
+      Serial.printf("Enabled logging: %s\n", LOG_FILENAME);
+    }
+  }
+  LOG_INF("* * * * Starting..\n");
+  LOG_DBG("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
+  
   checkLogRotate();
   //listDir("/", 3);
   //reset();
