@@ -2,7 +2,7 @@
 #define DEBUG_FILES
 #if defined(DEBUG_FILES)
   #undef LOG_DBG
-  #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
+  #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
 #endif
 
 #define MIN_STORAGE_SPACE (64 * 1024)  //Minimum allowed space for log rotate to work
@@ -20,6 +20,7 @@ void writeFile(const char * path, const char * message) {
   } else {
     LOG_ERR("\nFailed to write: %s\n", path);
   }
+  file.close();
 }
 // List a directory
 void listDir(const char * dirname, uint8_t levels) {
