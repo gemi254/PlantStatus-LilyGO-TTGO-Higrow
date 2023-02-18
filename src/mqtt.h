@@ -2,7 +2,7 @@
 //#define DEBUG_MQTT    
 #if defined(DEBUG_MQTT)
   #undef LOG_DBG
-  #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
+  #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
 #endif
 
 // Mqtt retain commands received
