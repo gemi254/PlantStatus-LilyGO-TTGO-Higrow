@@ -1,4 +1,4 @@
-#define CLASS_VERSION "1.6"          // Class version
+#define CLASS_VERSION "1.7"          // Class version
 #define MAX_PARAMS 50                // Maximum parameters to handle
 #define DEF_CONF_FILE "/config.ini"  // Default Ini file to save configuration
 #define INI_FILE_DELIM '~'           // Ini file pairs seperator
@@ -16,31 +16,32 @@
   #define STORAGE LittleFS // one of: SPIFFS LittleFS SD_MMC 
 #endif
 
+void logPrintNull(const char *format, ...) {}
+void logPrint(const char *format, ...);
 // LOG shortcuts
 //#define DEBUG_CONFIG_ASSIST    //Uncomment to serial print DBG messages
 #ifdef ESP32
   #define LOG_NO_COLOR
   #define LOG_COLOR_DBG
-  #define DBG_FORMAT(format) LOG_COLOR_DBG "[%s DEBUG @ %s:%u] " format LOG_NO_COLOR "", esp_log_system_timestamp(), pathToFileName(__FILE__), __LINE__
-  #define LOG_ERR(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
-  #define LOG_WRN(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
-  #define LOG_INF(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
+  #define DBG_FORMAT(format, type) LOG_COLOR_DBG "[%s %s @ %s:%u] " format LOG_NO_COLOR "", esp_log_system_timestamp(), type, pathToFileName(__FILE__), __LINE__
+  #define LOG_ERR(format, ...) logPrint(DBG_FORMAT(format,"ERR"), ##__VA_ARGS__)
+  #define LOG_WRN(format, ...) logPrint(DBG_FORMAT(format,"WRN"), ##__VA_ARGS__)
+  #define LOG_INF(format, ...) logPrint(DBG_FORMAT(format,"INF"), ##__VA_ARGS__)  
   #if defined(DEBUG_CONFIG_ASSIST)
-    #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format), ##__VA_ARGS__)
+    #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
   #else
-    void printfNull(const char *format, ...) {}
-    #define LOG_DBG(format, ...) printfNull(DBG_FORMAT(format), ##__VA_ARGS__)
+    
+    #define LOG_DBG(format, ...) logPrintNull(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
   #endif
 #else
   //#define LOG_DBG(format, ...) Serial.printf(format, ##__VA_ARGS__)
   #define LOG_ERR Serial.printf
   #define LOG_WRN Serial.printf
   #define LOG_INF Serial.printf
-
   #if defined(DEBUG_CONFIG_ASSIST)
     #define LOG_DBG Serial.printf
   #else
-    void printfNull(const char *format, ...) {}
+    void logPrintNull(const char *format, ...) { }
     #define LOG_DBG printfNull    
   #endif
 #endif
@@ -113,6 +114,7 @@ class ConfigAssist{
     String getHostName(){
       String hostName = get(HOSTNAME_KEY);
       if(hostName=="") hostName = "ESP_ASSIST_" + getMacID();
+      else hostName.replace("{mac}", getMacID());
       return hostName;
     }
 
@@ -335,6 +337,7 @@ class ConfigAssist{
         } 
         sort();
       }
+      file.close();
       LOG_INF("Loaded config: %s\n",filename.c_str());
       _valid = true;
       return true;
@@ -449,14 +452,15 @@ class ConfigAssist{
       LOG_DBG("Generate form _valid: %i, _dict: %i\n", _valid, _dict);
       //Load dictionary if no pressent
       if(!_dict) loadJsonDict(_jStr, true);
-
       //Send config form data
       server->setContentLength(CONTENT_LENGTH_UNKNOWN);
       String out(CONFIGASSIST_HTML_START);
       out.replace("{host_name}", getHostName());
-      server->send(200, "text/html", out); 
+      server->sendContent(out);
       server->sendContent(CONFIGASSIST_HTML_CSS);
-      out = CONFIGASSIST_HTML_BODY;
+      server->sendContent(CONFIGASSIST_HTML_CSS_CTRLS);      
+      server->sendContent(CONFIGASSIST_HTML_SCRIPT);
+      out = String(CONFIGASSIST_HTML_BODY);
       out.replace("{host_name}", getHostName());
       server->sendContent(out);
       //Render html keys
@@ -465,7 +469,7 @@ class ConfigAssist{
         server->sendContent(out);        
       }
       sort();
-      out = CONFIGASSIST_HTML_END;
+      out = String(CONFIGASSIST_HTML_END);
       out.replace("{appVer}", CLASS_VERSION);
       server->sendContent(out);
     }
@@ -539,7 +543,7 @@ class ConfigAssist{
         }
         elm = file + "\n" + elm;
       }else if(c.type == CHECK_BOX){
-        elm = String(CONFIGASSIST_HTML_CHECK_BOX);
+        elm = String(CONFIGASSIST_HTML_CHECK_BOX);        
         if(c.value=="True" || c.value=="on" || c.value=="1"){
           elm.replace("{chk}"," checked");
         }else
@@ -567,7 +571,7 @@ class ConfigAssist{
         String sVal = _seperators[sepKeyPos].value;
         outSep.replace("{val}", sVal);
          if(sepKeyPos > 0)
-          out = CONFIGASSIST_HTML_SEP_CLOSE + outSep + out;
+          out = String(CONFIGASSIST_HTML_SEP_CLOSE) + outSep + out;
         else 
           out = outSep + out;
         LOG_DBG("SEP key[%i]: %s = %s\n", sepKeyPos, sKey.c_str(), sVal.c_str());
@@ -598,6 +602,7 @@ class ConfigAssist{
         token = strtok( NULL, seps );
         i++;
       }
+      ret.replace("{val}",defVal);
       return ret;
     }
 
@@ -615,9 +620,9 @@ class ConfigAssist{
       while( token != NULL ){
         String opt;
         if(isDataList)
-          opt = CONFIGASSIST_HTML_SELECT_DATALIST_OPTION;
+          opt = String(CONFIGASSIST_HTML_SELECT_DATALIST_OPTION);
         else
-          opt = CONFIGASSIST_HTML_SELECT_OPTION;
+          opt = String(CONFIGASSIST_HTML_SELECT_OPTION);
         String optVal(token);
         if(optVal=="") continue;
         optVal.replace("'","");
