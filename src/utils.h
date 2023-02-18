@@ -136,3 +136,21 @@ void reset(){
   lastBoot.deleteConfig(LAST_BOOT_CONF);
   conf.deleteConfig();
 }
+
+//Logging to file or serial
+#define MAX_OUT 200
+static char fmtBuf[MAX_OUT];
+static char outBuf[MAX_OUT];
+static va_list arglist;
+
+void logPrint(const char *format, ...) {
+  strncpy(fmtBuf, format, MAX_OUT);
+  fmtBuf[MAX_OUT - 1] = 0;
+  va_start(arglist, format); 
+  vsnprintf(outBuf, MAX_OUT, fmtBuf, arglist);
+  va_end(arglist);
+  size_t msgLen = strlen(outBuf);
+  Serial.print(outBuf);
+  if (logFile) 
+    logF.print(outBuf);  
+}
