@@ -257,8 +257,25 @@ static void handleCmd(){
       out.replace("{title}", "Delete");
    }else if(cmd=="reset"){
       out.replace("{msg}", "Deleting ini files..<br>Please wait");
-      out.replace("{title}", "Reboot");
+      out.replace("{title}", "Reset ini files");
       reset();
+   }else if(cmd=="resetLog"){
+      out.replace("{title}", "Reseting log");
+      if (logFile){
+        dbgLog.close();
+        STORAGE.remove(LOG_FILENAME);
+        dbgLog = STORAGE.open(LOG_FILENAME, FILE_APPEND);
+        if( !dbgLog ) {
+          out.replace("{msg}", "Failed to reset log file..");
+          Serial.printf("Failed to open log %s\n", LOG_FILENAME);
+          logFile = false;
+        }else{
+          out.replace("{msg}", "Reseted log file");
+        }
+      }      
+    }else{
+      out.replace("{title}", "Error");
+      out.replace("{msg}", "Unknown command:" + cmd);
     }
     pServer->send(200, "text/html", out);
   } 
