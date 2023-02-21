@@ -177,14 +177,14 @@ void setup()
   setenv("TZ", conf["time_zone"].c_str(), 1);
   
   //Enable logging with timestamp
-  logFile  = conf["logFile"];
-  if(logFile){
+  logFile  = conf["logFile"] == "on" ? true: false;
+  if(logFile){    
     dbgLog = STORAGE.open(LOG_FILENAME, FILE_APPEND);
     if( !dbgLog ) {
-      Serial.printf("Failed to open log %s\n", LOG_FILENAME);
+      LOG_ERR("Failed to open log %s\n", LOG_FILENAME);
       logFile = false;
     }
-  }
+  } 
   
   LOG_INF("* * * * Starting * * * * * \n");
   //Sensor power control pin, must set high to enable measurements
