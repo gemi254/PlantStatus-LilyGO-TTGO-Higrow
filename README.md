@@ -4,7 +4,8 @@ Application supports both **DHT** sensors (DHT11,DHT12,DHT22) or the new **BME28
 and the internal **soil moisture** and **soil salt** sensor.
 
 ## Main features
-+ Configure parameters using an **access point** and **config portal** on startup. No need to re-compile for each device.
++ Configure parameters using an **access point** and **config portal** on startup. Uses 
+<a target="_blank" title="ConfigAssist class" href="https://github.com/gemi254/ConfigAssist-ESP32-ESP8266">ConfigAssist</a> library to edit application variables
 + Publish sensor values in a **mqtt broker**.
 + **Homeassistant** integration using MQTT **auto discovery** interface.
 + **Daily** measurements **Log** in a csv file stored in SPIFFS. **View** file in browser.
@@ -16,7 +17,7 @@ and the internal **soil moisture** and **soil salt** sensor.
 + **Auto sleep** after no activity.
 + Battery optimization.
 + Mqtt **remote configure** commands and wakeup function.
-
++ no need to re-compile for each device.
 <p align="center">
   <img src="images/PlantStatus.png">
   <br>
