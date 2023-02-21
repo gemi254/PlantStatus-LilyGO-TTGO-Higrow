@@ -38,14 +38,21 @@ bool getLocalNTPTime() {
   }
 }
 
-// Sync time to ntp
+// Wait to sync time to ntp
 void syncTime(){
   int tries=8;
-  while(!getLocalNTPTime() && tries >= 0){
+  bool sync = getLocalNTPTime();
+  while(!sync && tries >= 0){
+    if (getEpoch() > 10000) {
+      showLocalTime("NTP");
+      return;  
+    }else{
+      LOG_INF("Time not sync\n");
+    }
     delay(2000);
     tries--;
   };
-  if(tries==0) LOG_WRN("Time sync: %i\n", timeSynchronized);
+  if(tries==0) LOG_INF("Time sync: %i\n", timeSynchronized);
 }
 
 // Convert a string to time_t
@@ -152,5 +159,5 @@ void logPrint(const char *format, ...) {
   size_t msgLen = strlen(outBuf);
   Serial.print(outBuf);
   if (logFile) 
-    logF.print(outBuf);  
+    dbgLog.print(outBuf);  
 }
