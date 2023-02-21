@@ -26,7 +26,7 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.0.7"   // Generate log file to debug.
+#define APP_VER "1.0.7a"  // Generate log file to debug.View log, reset log
 //#define APP_VER "1.0.6" // File system using cards, Update config assist
 //#define APP_VER "1.0.5" // User interface using css cards.
 //#define APP_VER "1.0.4" // Replace mac id, No sleep onPower and error
@@ -108,7 +108,7 @@ static uint8_t apClients = 0;      //Connected ap clients
 // Log to file
 #define LOG_FILENAME "/log"
 bool logFile = false;
-File logF;                         
+File dbgLog;                         
 
 // User button
 bool btPress = false;
@@ -150,63 +150,20 @@ ConfigAssist lastBoot;           //Save last boot vars
 
 // Application setup function 
 void setup()
-{
+{  
   appStart = millis(); //Application start time
   chipID = getChipID();
-  
-  //User button check at startup  
-  pinMode(USER_BUTTON, INPUT); 
-  btState = !digitalRead(USER_BUTTON);
-  
-  //Sensor power control pin, must set high to enable measurements
-  pinMode(POWER_CTRL, OUTPUT);
-  digitalWrite(POWER_CTRL, 1);
-  delay(200);
-
-  adcVolt = analogRead(BAT_ADC); //Measure bat with no wifi enabled
   
   Serial.begin(230400);
   Serial.print("\n\n\n\n");
   Serial.flush();
   //Initiate SPIFFS and Mount file system
   if (!SPIFFS.begin(true)){
-    LOG_ERR("Error mounting SPIFFS\n");
+    Serial.print("Error mounting SPIFFS\n");
   }
   
-  //Enable logging
-  logFile  = conf["logFile"];
-  if(logFile){
-    logF = STORAGE.open(LOG_FILENAME, FILE_APPEND);
-    if( !logF ) {
-      Serial.printf("Failed to open log %s\n", LOG_FILENAME);
-      logFile = false;
-    }else{
-      Serial.printf("Enabled logging: %s\n", LOG_FILENAME);
-    }
-  }
-  LOG_INF("* * * * Starting..\n");
-  LOG_DBG("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
-  
-  checkLogRotate();
-  //listDir("/", 3);
-  //reset();
-
-  if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
-    LOG_DBG("Wake up from sleep\n");
-  
-  //Load last boot ini file
-  lastBoot.init(lastBootDict_json, LAST_BOOT_CONF);
-
   //Initialize config class
   conf.init(appConfigDict_json);
-
-  /*/Replace host name mac id
-  String host_name = conf["host_name"];
-  if(host_name.indexOf("{mac}")>=0){
-    host_name.replace("{mac}", conf.getMacID());
-    conf.put("host_name", host_name);
-  }*/
-
   //Failed to load config or ssid empty
   if(!conf.valid() || conf["st_ssid1"]=="" ){ 
     //Start Access point server and edit config
@@ -215,6 +172,44 @@ void setup()
     ResetCountdownTimer();
     return;
   }
+
+  //Time is ok on wake up but needs to be configured with tz
+  setenv("TZ", conf["time_zone"].c_str(), 1);
+  
+  //Enable logging with timestamp
+  logFile  = conf["logFile"];
+  if(logFile){
+    dbgLog = STORAGE.open(LOG_FILENAME, FILE_APPEND);
+    if( !dbgLog ) {
+      Serial.printf("Failed to open log %s\n", LOG_FILENAME);
+      logFile = false;
+    }
+  }
+  
+  LOG_INF("* * * * Starting * * * * * \n");
+  //Sensor power control pin, must set high to enable measurements
+  pinMode(POWER_CTRL, OUTPUT);
+  digitalWrite(POWER_CTRL, 1);
+  delay(200);
+
+  if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
+    LOG_DBG("Wake up from sleep\n");
+
+  adcVolt = analogRead(BAT_ADC); //Measure bat with no wifi enabled
+  //User button check at startup  
+  pinMode(USER_BUTTON, INPUT); 
+  btState = !digitalRead(USER_BUTTON);
+  LOG_DBG("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
+  
+  checkLogRotate();
+  //listDir("/", 3);
+
+  //Load last boot ini file
+  lastBoot.init(lastBootDict_json, LAST_BOOT_CONF);  
+  if(!lastBoot.valid()){
+    LOG_ERR("Invalid lastBoot file: %s\n", LAST_BOOT_CONF);
+    STORAGE.remove(LAST_BOOT_CONF);
+  } 
     
   //Initialize on board sensors
   initSensors();  
