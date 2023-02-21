@@ -33,7 +33,7 @@ void goToDeepSleep(const char *reason, bool error=true)
 
   LOG_INF("Sleep, ms: %lu, reason: %s, Boots: %u, BootsErr: %u, millis: %lu\n", sleepTime, reason, lastBoot["boot_cnt"].toInt(), lastBoot["boot_cnt_err"].toInt(), (millis() - appStart));
   Serial.flush();
-  if(logF) logF.close();  
+  if(dbgLog) dbgLog.close();  
   delay(200);
   //Go to sleep! Zzzz
   esp_deep_sleep_start();
