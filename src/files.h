@@ -156,7 +156,7 @@ void removeFolder(String dirName){
 // Check an delete logs to save space
 void checkLogRotate(){
   size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
-  LOG_DBG("Storage, free: %lu\n", free);
+  LOG_DBG("Storage, free: %lu K\n", (free/1024));
   if(free < MIN_STORAGE_SPACE){
     LOG_WRN("Storage is running low, free: %lu\n", free);
     String oldestDir = getOldestDir(DATA_DIR);    
