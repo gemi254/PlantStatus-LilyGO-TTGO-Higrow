@@ -78,10 +78,15 @@ Old **monthly** history can be viewed with `Logs` button. Navigate in SPIFFS Dat
   PlantStatus Daily log view
 </p>
 
-In order to **debug** the application enable **logFile** from **Device settings** in configure section.A log text file  **/log** will be generated
-with  debug info that can be viewed from browser while the device is awake with command ``http://{ip_address}/cmd?view=/log``.
+In order to **debug** the application enable **logFile** from **Device settings** in configure section. A log text file  **/log** will be generated
 
-The file can also be deleted from browser with **Reset** command ``http://{ip_address}/cmd?resetLog=/log``.
+with  debug info that can be viewed from browser while the device is awake with command
+
+``http://{ip_address}/cmd?view=/log``.
+
+The file can also be deleted from browser with **Reset** command
+
+``http://{ip_address}/cmd?resetLog=/log``.
 
 Remote **configuration commands** can be send as **retained** messages from the **mosquitto broker**. Messages will be delivered on next reboot,
 alter the configuration and save it to SPIFFS to be loaded on next reboot. Commands can be 
