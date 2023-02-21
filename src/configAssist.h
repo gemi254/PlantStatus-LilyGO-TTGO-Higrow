@@ -16,10 +16,12 @@
   #define STORAGE LittleFS // one of: SPIFFS LittleFS SD_MMC 
 #endif
 
-void logPrintNull(const char *format, ...) {}
-void logPrint(const char *format, ...);
 // LOG shortcuts
 //#define DEBUG_CONFIG_ASSIST    //Uncomment to serial print DBG messages
+//#define logPrint Serial.printf
+void logPrint(const char *format, ...);
+void logPrintNull(const char *format, ...) {}
+
 #ifdef ESP32
   #define LOG_NO_COLOR
   #define LOG_COLOR_DBG
@@ -28,21 +30,18 @@ void logPrint(const char *format, ...);
   #define LOG_WRN(format, ...) logPrint(DBG_FORMAT(format,"WRN"), ##__VA_ARGS__)
   #define LOG_INF(format, ...) logPrint(DBG_FORMAT(format,"INF"), ##__VA_ARGS__)  
   #if defined(DEBUG_CONFIG_ASSIST)
-    #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
-  #else
-    
+    #define LOG_DBG(format, ...) logPrint(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
+  #else    
     #define LOG_DBG(format, ...) logPrintNull(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
   #endif
 #else
-  //#define LOG_DBG(format, ...) Serial.printf(format, ##__VA_ARGS__)
-  #define LOG_ERR Serial.printf
-  #define LOG_WRN Serial.printf
-  #define LOG_INF Serial.printf
+  #define LOG_ERR logPrint
+  #define LOG_WRN logPrint
+  #define LOG_INF logPrint
   #if defined(DEBUG_CONFIG_ASSIST)
-    #define LOG_DBG Serial.printf
+    #define LOG_DBG logPrint
   #else
-    void logPrintNull(const char *format, ...) { }
-    #define LOG_DBG printfNull    
+    #define LOG_DBG logPrintNull    
   #endif
 #endif
 
@@ -70,8 +69,6 @@ class ConfigAssist{
   public:
     ConfigAssist() {_dict = false; _valid=false; _confFile=""; }
     ~ConfigAssist() {}
-  private:
-    enum input_types { TEXT_BOX=1, TEXT_AREA=2, CHECK_BOX=3, OPTION_BOX=4, RANGE_BOX=5, COMBO_BOX=6};
   public:  
     // Load configs after storage started
     void init(const char * jStr, String ini_file = DEF_CONF_FILE) { 
@@ -82,7 +79,7 @@ class ConfigAssist{
       if(!_valid) loadJsonDict(_jStr);
     }
 
-    //if not Use dictionary load default minimal config
+    // if not Use dictionary load default minimal config
     void init() { init(NULL); }
 
     // Is config loaded valid ?
@@ -198,7 +195,7 @@ class ConfigAssist{
       return false;
     }
 
-    //Get the configuration in json format
+    // Get the configuration in json format
     String getJsonConfig(){
       confPairs c;
       String j = "{";
@@ -217,6 +214,7 @@ class ConfigAssist{
           LOG_INF("[%u]: %s = %s; %s; %i\n", c.readNo, c.name.c_str(), c.value.c_str(), c.label.c_str(), c.type );
       }
     }
+    
     // Load json description file. 
     // On update=true update only additional pair info
     int loadJsonDict(String jStr, bool update=false) { 
@@ -313,7 +311,7 @@ class ConfigAssist{
       sort();
       sortSeperators();
       _dict = true;
-      if(!update) _valid = true;
+      //if(!update) _valid = true;
       LOG_INF("Loaded json dict\n");
       return i;
     }
@@ -359,16 +357,17 @@ class ConfigAssist{
         return false;
       }
       //Save config file with updated content
+      size_t szOut=0;
       for (auto& row: _configs) {
         if(row.name==HOSTNAME_KEY){
           row.value.replace("{mac}", getMacID());
         }
         char configLine[512];
         sprintf(configLine, "%s%c%s\n", row.name.c_str(), INI_FILE_DELIM, row.value.c_str());   
-        file.write((uint8_t*)configLine, strlen(configLine));
+        szOut+=file.write((uint8_t*)configLine, strlen(configLine));
         LOG_DBG("Saved: %s = %s\n", row.name.c_str(), row.value.c_str());
       }        
-      LOG_INF("File saved: %s\n", filename.c_str());
+      LOG_INF("File saved: %s, sz: %lu B\n", filename.c_str(), szOut);
       file.close();      
       return true;      
     }
@@ -697,6 +696,7 @@ class ConfigAssist{
     }
      
   private: 
+    enum input_types { TEXT_BOX=1, TEXT_AREA=2, CHECK_BOX=3, OPTION_BOX=4, RANGE_BOX=5, COMBO_BOX=6};
     std::vector<confPairs> _configs;
     std::vector<confSeperators> _seperators;
     bool _valid;
