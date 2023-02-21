@@ -272,7 +272,10 @@ static void handleCmd(){
         }else{
           out.replace("{msg}", "Reseted log file");
         }
-      }      
+      }else{
+        STORAGE.remove(LOG_FILENAME);
+        out.replace("{msg}", "Deleted log file");
+      }
     }else{
       out.replace("{title}", "Error");
       out.replace("{msg}", "Unknown command:" + cmd);
