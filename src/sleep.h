@@ -23,11 +23,11 @@ void goToDeepSleep(const char *reason, bool error=true)
   esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
   
   //Remember last boot vals
-  if(error) lastBoot.put("boot_cnt_err", String(lastBoot["boot_cnt_err"].toInt() + 1));
-  else lastBoot.put("boot_cnt", String(lastBoot["boot_cnt"].toInt() + 1));
-  lastBoot.put("sleep_reason", String(reason));
-  lastBoot.put("bat_voltage", String(data.batVolt,2));
-  lastBoot.put("bat_perc", String(data.batPerc,1)); 
+  if(error) lastBoot.put("boot_cnt_err", String(lastBoot["boot_cnt_err"].toInt() + 1), true);
+  else lastBoot.put("boot_cnt", String(lastBoot["boot_cnt"].toInt() + 1), true);
+  lastBoot.put("sleep_reason", String(reason), true);
+  lastBoot.put("bat_voltage", String(data.batVolt,2), true);
+  lastBoot.put("bat_perc", String(data.batPerc,1), true); 
   //Save last boot vars
   lastBoot.saveConfigFile(LAST_BOOT_CONF);
 
