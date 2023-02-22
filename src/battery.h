@@ -32,11 +32,11 @@ float calcBatteryDays(){
     //Is time synced?
     if(curDate.length()>0){
       data.batChargeDate = curDate;
-      lastBoot.put("bat_charge_date", data.batChargeDate);
+      lastBoot.put("bat_charge_date", data.batChargeDate,true);
     }
     //Reset counters
-    lastBoot.put("boot_cnt", "0");
-    lastBoot.put("boot_cnt_err", "0");
+    lastBoot.put("boot_cnt", "0",true);
+    lastBoot.put("boot_cnt_err", "0",true);
     LOG_INF("Battery CHARGING, date: %s\n", curDate.c_str());    
   }else{ //Discharging
     onPower = false;
