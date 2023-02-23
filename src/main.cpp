@@ -177,7 +177,7 @@ void setup()
   setenv("TZ", conf["time_zone"].c_str(), 1);
   
   //Enable logging with timestamp
-  logFile  = conf["logFile"] == "on" ? true: false;
+  logFile  = conf["logFile"].toInt();
   if(logFile){    
     dbgLog = STORAGE.open(LOG_FILENAME, FILE_APPEND);
     if( !dbgLog ) {
