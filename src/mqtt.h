@@ -1,11 +1,11 @@
-//Uncomment to serial print DBG messages rather than publish
-//#define DEBUG_MQTT    
+
+//#define DEBUG_MQTT    //Uncomment to serial print DBG messages rather than publish mqtt messages
 #if defined(DEBUG_MQTT)
   #undef LOG_DBG
   #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
 #endif
 
-// Mqtt retain commands received
+// Handle Mqtt retain commands
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if(length==0) return;
   String msg="";
@@ -189,13 +189,7 @@ String getJsonBuff(){
   StaticJsonDocument<1536> doc;
   //Set the values in the document according to SensorData  
   JsonObject plant = doc.to<JsonObject>();
-  float voltAvg = (atof(lastBoot["bat_voltage"].c_str()) + data.batVolt ) / 2.0F;
-  LOG_DBG("Battery last volt: %s, cur: %1.3f, avg: %1.3f\n", lastBoot["bat_voltage"].c_str(), data.batVolt, voltAvg);
-  
-  float percAvg = (atof(lastBoot["bat_perc"].c_str()) + data.batPerc ) / 2.0F;
-  LOG_DBG("Battery last perc: %s, cur: %3.1f, avg: %3.1f\n", lastBoot["bat_perc"].c_str(), data.batPerc, percAvg);
-  percAvg = truncateFloat(percAvg, 0);
-  
+ 
   plant["sensorName"] = conf["plant_name"];
   //plant["deviceName"] = conf["host_name"];
   //plant["chipId"] = chipID;
@@ -211,8 +205,8 @@ String getJsonBuff(){
   // plant["plantValveNo"] = plantValveNo; 
   // plant["wifissid"] = WiFi.SSID();
   plant["batChargeDate"] = data.batChargeDate;
-  plant["batPerc"] = percAvg; //data.batPerc;
-  plant["batVolt"] = truncateFloat(voltAvg, 2);
+  plant["batPerc"] = data.batPerc;
+  plant["batVolt"] = truncateFloat(data.batVolt, 2);
   plant["batDays"] = truncateFloat(data.batDays, 1);
   //plant["batLastPerc"] = lastBoot["bat_perc"];
   //plant["batPercAvg"] = percAvg;
