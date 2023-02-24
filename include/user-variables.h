@@ -164,11 +164,8 @@ const char* appConfigDict_json PROGMEM = R"~(
 
 
 //Last boot save variables
-const char* lastBootDict_json PROGMEM = R"~([{
-      "name": "bat_charge_date",
-     "label": "Date that the battery is stop charging. (leave blank)",
-   "default": ""
-  },{
+const char* lastBootDict_json PROGMEM = R"~([
+  {
       "name": "bat_perc",
      "label": "The battery voltage. (leave blank)",
    "default": ""
