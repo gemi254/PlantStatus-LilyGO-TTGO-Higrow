@@ -57,12 +57,7 @@ bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<std:
     LOG_ERR("Failed to open dir: %s\n", dirName.c_str());
     return "";
   }
-  /*
-  if (!root.isDirectory()) {
-    LOG_ERR("Not a directory\n");
-    return false;
-  }*/
-
+  
   File file = root.openNextFile();
   String oPath = "";
   while (file) {
