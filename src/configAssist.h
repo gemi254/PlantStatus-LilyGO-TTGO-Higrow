@@ -18,8 +18,8 @@
 
 // LOG shortcuts
 //#define DEBUG_CONFIG_ASSIST    //Uncomment to serial print DBG messages
-#define logPrint Serial.printf
-//void logPrint(const char *format, ...);
+//#define logPrint Serial.printf
+void logPrint(const char *format, ...);
 void logPrintNull(const char *format, ...) {}
 
 #ifdef ESP32
@@ -369,7 +369,7 @@ class ConfigAssist{
         szOut+=file.write((uint8_t*)configLine, strlen(configLine));
         LOG_DBG("Saved: %s = %s, type: %i\n", row.name.c_str(), row.value.c_str(), row.type);
       }        
-      LOG_INF("File saved: %s, sz: %zu B\n", filename.c_str(), szOut);
+      LOG_INF("File saved: %s, sz: %u B\n", filename.c_str(), szOut);
       file.close();      
       return true;      
     }
