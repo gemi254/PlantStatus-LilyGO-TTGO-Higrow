@@ -304,7 +304,7 @@ static void handleFileSytem(){
   String dir(DATA_DIR);
   if(pServer->hasArg("dir")){
     dir = pServer->arg("dir");
-    if(dir.endsWith("/")) dir.remove(dir.length() - 1);
+    if(dir.endsWith("/") && dir.length()>1) dir.remove(dir.length() - 1);
   }
   std::vector<String> dirArr;               //Directory array
   std::vector<std::vector<String>> fileArr; //Files array
