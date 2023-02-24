@@ -151,7 +151,7 @@ void readSensors(){
   //data.saltadvice = getSaltAdvice(salt);
 
   //Battery status, and charging status and days.
-  data.batPerc  = calcBattery(adcVolt);
+  data.batPerc = truncateFloat(calcBattery(adcVolt), 0);
   data.batDays = calcBatteryDays();
 
   //Correction
