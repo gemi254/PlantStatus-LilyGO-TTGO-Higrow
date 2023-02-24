@@ -26,7 +26,8 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.0.7a"  // Generate log file to debug.View log, reset log
+#define APP_VER "1.0.8"   // Battery prercent fix, charge date on a seperate file
+//#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
 //#define APP_VER "1.0.6" // File system using cards, Update config assist
 //#define APP_VER "1.0.5" // User interface using css cards.
 //#define APP_VER "1.0.4" // Replace mac id, No sleep onPower and error
@@ -48,6 +49,7 @@
 #define DS18B20_PIN 21
 
 #define LAST_BOOT_CONF "/lastboot.ini"
+#define LAST_BAT_INF   "/batinf.ini"
 #define CONNECT_TIMEOUT 10000
 #define MAX_SSID_ARR_NO 2 //Maximum ssid json will describe
 
@@ -195,15 +197,17 @@ void setup()
   if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
     LOG_DBG("Wake up from sleep\n");
 
-  adcVolt = analogRead(BAT_ADC); //Measure bat with no wifi enabled
+  //Measure bat with no wifi enabled
+  adcVolt = analogRead(BAT_ADC); 
   //User button check at startup  
   pinMode(USER_BUTTON, INPUT); 
   btState = !digitalRead(USER_BUTTON);
   LOG_DBG("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
   
-  checkLogRotate();
+  //Free space?
   //listDir("/", 3);
-
+  checkLogRotate();
+  
   //Load last boot ini file
   lastBoot.init(lastBootDict_json, LAST_BOOT_CONF);  
   if(!lastBoot.valid()){
@@ -211,17 +215,18 @@ void setup()
     STORAGE.remove(LAST_BOOT_CONF);
   } 
     
+  //Battery & charging status.
+  data.batPerc = truncateFloat(calcBattery(adcVolt),0);
+  
   //Initialize on board sensors
   initSensors();  
-  
-  //Battery perc, and charging status.
-  data.batPerc  = calcBattery(adcVolt);
   
   //Start ST WiFi
   connectToNetwork();
 
-  //Synchronize time
-  syncTime();
+  //Synchronize time every n loops
+  if(lastBoot["boot_cnt"].toInt() % 2 ) 
+    syncTime();
   
   //Connect to mqtt broker
   mqttConnect();
@@ -229,8 +234,8 @@ void setup()
   //Listen config commands
   subscribeConfig();
 
-  btState = !digitalRead(USER_BUTTON);
   //Start web server on long button press or on power connected?
+  btState = !digitalRead(USER_BUTTON);
   if(btState){
     startWebSever(); 
     ResetCountdownTimer();
@@ -254,8 +259,8 @@ void loop(){
     publishSensors(data);
   
     //Remember last volt
-    lastBoot.put("bat_voltage", String(data.batVolt),true);
-    lastBoot.put("bat_perc", String(data.batPerc,1),true);
+    lastBoot.put("bat_voltage", String(data.batVolt, 2),true);
+    lastBoot.put("bat_perc", String(data.batPerc, 0),true);
     
     data.sleepReason = "noSleep";
     
