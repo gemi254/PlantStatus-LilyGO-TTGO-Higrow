@@ -26,7 +26,7 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.0.8"   // Battery prercent fix, charge date on a seperate file
+#define APP_VER "1.0.8"   // Battery prercent fix, Time sync ever 2 loop, charge date on a seperate file
 //#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
 //#define APP_VER "1.0.6" // File system using cards, Update config assist
 //#define APP_VER "1.0.5" // User interface using css cards.
@@ -224,10 +224,13 @@ void setup()
   //Start ST WiFi
   connectToNetwork();
 
-  //Synchronize time every n loops
-  if(lastBoot["boot_cnt"].toInt() % 2 ) 
+  //Synchronize time if needed or every n loops
+  if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % 2 ){
     syncTime();
-  
+  }else{
+    timeSynchronized = true;
+  }
+
   //Connect to mqtt broker
   mqttConnect();
   
