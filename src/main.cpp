@@ -26,7 +26,8 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.0.8"   // Battery prercent fix, Time sync ever 2 loop, charge date on a seperate file
+#define APP_VER "1.0.9"   // Auto adjust BH1750 Time register
+//#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
 //#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
 //#define APP_VER "1.0.6" // File system using cards, Update config assist
 //#define APP_VER "1.0.5" // User interface using css cards.
@@ -126,6 +127,8 @@ PubSubClient mqttClient(wifiClient);
 
 // Sensors
 BH1750 lightMeter(0x23);          //0x23
+#define LUX_AUTOAJUST             //Auto adjust BH1750 Time register
+
 Adafruit_BME280 *pBmp = NULL;     //0x77
 DHT *pDht=NULL;
 DS18B20 *pTemp18B20 = NULL;
@@ -188,11 +191,11 @@ void setup()
     }
   } 
   
-  LOG_INF("* * * * Starting * * * * * \n");
+  LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);
   //Sensor power control pin, must set high to enable measurements
   pinMode(POWER_CTRL, OUTPUT);
   digitalWrite(POWER_CTRL, 1);
-  delay(200);
+  delay(250);
 
   if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
     LOG_DBG("Wake up from sleep\n");
@@ -219,13 +222,14 @@ void setup()
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
   
   //Initialize on board sensors
-  initSensors();  
+  if(!initSensors())
+    goToDeepSleep("initFail");
   
   //Start ST WiFi
   connectToNetwork();
 
   //Synchronize time if needed or every n loops
-  if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % 2 ){
+  if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % 3 ){
     syncTime();
   }else{
     timeSynchronized = true;
@@ -254,7 +258,10 @@ void loop(){
   if (millis() - sensorReadMs >= SENSORS_READ_INTERVAL){
     //Read sensor values,
     readSensors();    
-  
+    
+    //Append to log
+    logSensors();
+
     //Send measurement to web sockets to update page
     wsSendSensors();
 
