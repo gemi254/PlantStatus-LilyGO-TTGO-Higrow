@@ -1,5 +1,5 @@
 // Initialize on board sensors according config
-void initSensors(){
+bool initSensors(){
   //Temp/hum sensors
   if(conf["dht_type"]=="DHT11" || conf["dht_type"]=="DHT21" || conf["dht_type"]=="DHT22"){      
       uint8_t dht_type = 11;
@@ -17,11 +17,13 @@ void initSensors(){
         pBmp = new Adafruit_BME280();
         if (!pBmp->begin()){
           LOG_ERR("Could not find a valid BMP280 sensor, check wiring!");
+          return false;
         }else{
           bmeFound = true;
         }
       }else{
         LOG_ERR("Wire failed to begin\n");
+        return false;
       } 
   }
  
@@ -30,7 +32,9 @@ void initSensors(){
     LOG_INF("BH1750 begin\n");
   }else{
     LOG_ERR("Error initialising BH1750\n");
+    return false;
   }
+  return true;
 }
 
 // READ Salt
@@ -53,7 +57,7 @@ uint32_t readSalt()
     humi += array[i];
   }
   humi /= samples - 2;
-  LOG_DBG("Salt read: %lu\n", humi);
+  LOG_DBG("Read salt: %lu\n", humi);
   return humi;
 }
 
@@ -61,7 +65,7 @@ uint32_t readSalt()
 uint8_t readSoil(){  
   uint16_t soil = analogRead(SOIL_PIN);
   uint8_t soilM = map(soil, conf["soil_min"].toInt(), conf["soil_max"].toInt(), 100, 0);
-  LOG_DBG("Soil read: %lu, map: %lu\n",soil ,soilM);  
+  LOG_DBG("Read soil: %lu, map: %lu\n",soil ,soilM);  
   return soilM;
 }
 
@@ -77,6 +81,98 @@ float readSoilTemp()
   #endif
   return temp;
 }
+/*
+After the measurement Time register value is changed according to the result:
+lux > 40000 ==> MTreg =  32
+lux < 40000 ==> MTreg =  69  (default)
+lux <    10 ==> MTreg = 138
+*/
+float readLightValue(){
+    float lux = lightMeter.readLightLevel();
+
+    #ifdef LUX_AUTOAJUST
+    if (lux < 0){ //-1 : no valid return value -2 : sensor not configured
+        LOG_ERR("Failed to read BH1750!\n");
+        return NAN;
+    }else{
+      byte MTreg = 69;
+      if (lux > 40000.0F) // reduce measurement time - needed in direct sun light
+        MTreg = 32;
+      else if (lux > 10.0F)  // typical light environment            
+        MTreg = 69;            
+      else if (lux <= 10.0F)  //very low light environment              
+        MTreg = 138;        
+
+      if(MTreg!=69){ //Default value
+        if (!lightMeter.setMTreg(MTreg)){
+          LOG_ERR("Failed to set BH1750 mtreg: %i\n", MTreg);        
+        }else{
+          LOG_INF("Adjusted BH1750 mtreg: %i\n", MTreg);   
+          lux = lightMeter.readLightLevel();
+          delay(150);
+        }  
+      }    
+    # endif
+    LOG_DBG("Read lux : %4.1f\n", lux);
+    return lux;
+  }
+}
+// Read on board sensors
+void readSensors(){
+  //float luxRead = lightMeter.readLightLevel(); // 1st read seems to return 0 always
+  if(dhtFound){
+    float t12 = pDht->readTemperature(); // Read temperature as Fahrenheit then dht.readTemperature(true)
+    data.temp = t12;
+    float h12 = pDht->readHumidity();
+    data.humid = h12;
+    LOG_DBG("Read DHT, temp: %4.1f, hum: %4.1f\n", t12, h12);    
+  }else if (bmeFound) {
+    float bme_temp = pBmp->readTemperature();
+    if( isnan(bme_temp) || bme_temp < -40.0F || bme_temp > 85.0F ) bme_temp = NAN;
+    data.temp = bme_temp;
+    float bme_humid = pBmp->readHumidity();
+    if( isnan(bme_humid) || bme_humid < -40.0F || bme_humid > 85.0F ) bme_humid = NAN;
+    data.humid = bme_humid;
+    float bme_pressure = (pBmp->readPressure() / 100.0F);
+    if( isnan(bme_pressure) || bme_pressure < 300.0F || bme_pressure > 1100.0F ) bme_pressure = NAN;
+    data.pressure = bme_pressure;
+    LOG_DBG("Read bme280, temp: %4.1f, hum: %4.1f, press: %4.1f\n", bme_temp, bme_humid, bme_pressure);
+  }
+
+  uint8_t  soil = readSoil();
+  data.soil = soil;
+  /*
+  float soilTemp = readSoilTemp();
+  data.soilTemp = soilTemp;
+  */
+  uint32_t salt = readSalt();
+  data.salt = (uint8_t)salt;
+  //data.saltadvice = getSaltAdvice(salt);
+
+  //Battery status, and charging status and days.
+  data.batPerc = truncateFloat(calcBattery(adcVolt), 0);
+  data.batDays = calcBatteryDays();
+
+  //Correction
+  if(data.batPerc > 100.0F) data.batPerc = 100.0F;
+  
+  //Lux level
+  float lux = readLightValue();
+  if (isnan(lux) || lux < 0.0 || lux > 54612.5F) lux = NAN;  
+  data.lux = lux;
+
+  //conf.saveConfigFile(CONF_FILE);  
+  //Get last boot values
+  data.time = getCurDateTimeString();
+  data.bootCnt = lastBoot["boot_cnt"].toInt();
+  data.bootCntError = lastBoot["boot_cnt_err"].toInt();
+  data.sleepReason = lastBoot["sleep_reason"];
+
+  //Next auto reading reset
+  sensorReadMs = millis();
+}
+
+// Get a log filename
 String getLogFileName(bool createDir = true){
   if(!timeSynchronized) return "";
   String dirName = getCurDateTimeString(true,false);
@@ -84,6 +180,7 @@ String getLogFileName(bool createDir = true){
   if(createDir) STORAGE.mkdir(dirName);
   return String(DATA_DIR) + dirName + fileName + ".csv";
 }
+
 //Log sensors to a csv file on storage
 void logSensors(){
   if(!timeSynchronized) return;
@@ -115,64 +212,3 @@ void logSensors(){
   LOG_DBG("Log to: %s, line: %s", fullPath.c_str(),line.c_str() );
 }
 
-// Read on board sensors
-void readSensors(){
-  float luxRead = lightMeter.readLightLevel(); // 1st read seems to return 0 always
-  LOG_DBG("Lux first read: %4.1f\n", luxRead);  
-  //delay(2000);
-
-  if(dhtFound){
-    float t12 = pDht->readTemperature(); // Read temperature as Fahrenheit then dht.readTemperature(true)
-    data.temp = t12;
-    delay(500);
-    float h12 = pDht->readHumidity();
-    data.humid = h12;
-  }else if (bmeFound) {
-    float bme_temp = pBmp->readTemperature();
-    if( isnan(bme_temp) || bme_temp < -40.0F || bme_temp > 85.0F ) bme_temp = 0.0;
-    data.temp = bme_temp;
-    float bme_humid = pBmp->readHumidity();
-    if( isnan(bme_humid) || bme_humid < -40.0F || bme_humid > 85.0F ) bme_humid = 0.0;
-    data.humid = bme_humid;
-    float bme_pressure = (pBmp->readPressure() / 100.0F);
-    if( isnan(bme_pressure) || bme_pressure < 300.0F || bme_pressure > 1100.0F ) bme_pressure = 0.0;
-    data.pressure = bme_pressure;
-  }
-
-  uint8_t  soil = readSoil();
-  data.soil = soil;
-  /*
-  float soilTemp = readSoilTemp();
-  data.soilTemp = soilTemp;
-*/
-  uint32_t salt = readSalt();
-  data.salt = (uint8_t)salt;
-
-  //data.saltadvice = getSaltAdvice(salt);
-
-  //Battery status, and charging status and days.
-  data.batPerc = truncateFloat(calcBattery(adcVolt), 0);
-  data.batDays = calcBatteryDays();
-
-  //Correction
-  if(data.batPerc > 100.0F) data.batPerc = 100.0F;
-
-  luxRead = lightMeter.readLightLevel();
-  LOG_DBG("Lux read: %4.1f\n", luxRead);
-  if (isnan(luxRead) || luxRead < 0.0 || luxRead > 54612.5F) luxRead = 0.0;
-  data.lux = luxRead;
-
-  //conf.saveConfigFile(CONF_FILE);
-  
-  //Get last boot values
-  data.time = getCurDateTimeString();
-  data.bootCnt = lastBoot["boot_cnt"].toInt();
-  data.bootCntError = lastBoot["boot_cnt_err"].toInt();
-  data.sleepReason = lastBoot["sleep_reason"];
-  
-  //Append to log
-  logSensors();
-
-  //Next auto reading reset
-  sensorReadMs = millis();
-}
