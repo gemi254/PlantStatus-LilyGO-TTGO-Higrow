@@ -247,7 +247,7 @@ static void handleCmd(){
       mqttSetupDevice(getChipID()); 
       out.replace("{msg}", "Sended mqtt homeassistant device discovery");
       out.replace("{title}", "Homeassistant discovery");
-    }else if(cmd=="del"){
+    }else if(cmd=="del" || cmd=="rm"){
       String file(pServer->arg(i));
       if(STORAGE.remove(file.c_str())){
         out.replace("{msg}", "Deleted file: " + file);
