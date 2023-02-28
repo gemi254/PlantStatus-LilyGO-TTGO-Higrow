@@ -221,10 +221,6 @@ void setup()
   //Battery & charging status.
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
   
-  //Initialize on board sensors
-  if(!initSensors())
-    goToDeepSleep("initFail");
-  
   //Start ST WiFi
   connectToNetwork();
 
@@ -234,6 +230,11 @@ void setup()
   }else{
     timeSynchronized = true;
   }
+
+  //Initialize on board sensors
+  // wire can not be initialized at beginng, the bus is busy
+  if(!initSensors())
+    goToDeepSleep("initFail");
 
   //Connect to mqtt broker
   mqttConnect();
