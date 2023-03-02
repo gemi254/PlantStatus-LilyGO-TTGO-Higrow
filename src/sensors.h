@@ -1,3 +1,4 @@
+
 // Initialize on board sensors according config
 bool initSensors(){
   //Temp/hum sensors
@@ -13,25 +14,25 @@ bool initSensors(){
   }else{
       bool wireOk = Wire.begin(I2C_SDA, I2C_SCL); // wire can not be initialized at beginng, the bus is busy
       if (wireOk){
-        LOG_INF("Wire begin ok\n");
+        LOG_INF("Wire begin OK\n");
         pBmp = new Adafruit_BME280();
         if (!pBmp->begin()){
-          LOG_ERR("Could not find a valid BMP280 sensor, check wiring!");
-          return false;
+            LOG_ERR("BMP280 begin error\n");
+            return false;
         }else{
           bmeFound = true;
         }
       }else{
-        LOG_ERR("Wire failed to begin\n");
+        LOG_ERR("Wire begin error\n");
         return false;
       } 
   }
  
   //Light sensor
   if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE)){
-    LOG_INF("BH1750 begin\n");
+    LOG_INF("BH1750 begin OK\n");
   }else{
-    LOG_ERR("Error initialising BH1750\n");
+    LOG_ERR("BH1750 begin error \n");
     return false;
   }
   return true;
@@ -183,7 +184,10 @@ String getLogFileName(bool createDir = true){
 
 //Log sensors to a csv file on storage
 void logSensors(){
-  if(!timeSynchronized) return;
+  if(!timeSynchronized){
+    LOG_ERR("Time is not sync\n");
+    return;
+  } 
   String sep="\t";  
   String fullPath =getLogFileName();
   String line = "";
