@@ -59,7 +59,7 @@ bool isSensor(String key){
 }
 
 // Connect to a SIID network
-void connectToNetwork(){  
+bool connectToNetwork(){  
   WiFi.mode(WIFI_STA);
   //WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE); // call is only a workaround for bug in WiFi class
   WiFi.setHostname(conf["host_name"].c_str());
@@ -89,10 +89,12 @@ void connectToNetwork(){
   }
   
   if (WiFi.status() != WL_CONNECTED){
-    goToDeepSleep("notConnected");
+    LOG_ERR("Wifi connect fail\n");
+    return false;
   }else{
     LOG_INF("Wifi AP SSID: %s connected, use 'http://%s' to connect\n", st_ssid.c_str(), WiFi.localIP().toString().c_str()); 
   }
+  return true;
 }
 
 // Functions forward definition
