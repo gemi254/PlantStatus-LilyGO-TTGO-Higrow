@@ -68,6 +68,7 @@ struct confSeperators {
 class ConfigAssist{ 
   public:
     ConfigAssist() {_jsonLoaded = false; _iniValid=false; _confFile=""; }
+    ConfigAssist(const char * jStr, String ini_file = DEF_CONF_FILE) {  init(jStr, ini_file);  }
     ~ConfigAssist() {}
   public:  
     // Load configs after storage started
@@ -127,7 +128,10 @@ class ConfigAssist{
       return String(""); 
     }
     
-    // Update the value of thisKey = value
+    // Update the value of thisKey = value (int)
+    bool put(String thisKey, int value, bool force=false) {  return  put(thisKey, String(value), force); } 
+    
+    // Update the value of thisKey = value (string)
     bool put(String thisKey, String value, bool force=false) {      
       LOG_DBG("Put %s=%s\n", thisKey.c_str(), value.c_str()); 
       int keyPos = getKeyPos(thisKey);      
