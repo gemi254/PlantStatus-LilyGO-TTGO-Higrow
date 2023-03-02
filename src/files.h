@@ -2,7 +2,7 @@
 #define DEBUG_FILES
 #if defined(DEBUG_FILES)
   #undef LOG_DBG
-  #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
+  #define LOG_DBG(format, ...) logPrint(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
 #endif
 
 #define MIN_STORAGE_SPACE (64 * 1024)  //Minimum allowed space for log rotate to work
