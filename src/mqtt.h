@@ -1,8 +1,8 @@
 
 //#define DEBUG_MQTT    //Uncomment to serial print DBG messages rather than publish mqtt messages
 #if defined(DEBUG_MQTT)
-  #undef LOG_DBG
-  #define LOG_DBG(format, ...) Serial.printf(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
+  #undef LOG_DBG  
+  #define LOG_DBG(format, ...) logPrint(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
 #endif
 
 // Handle Mqtt retain commands
@@ -78,7 +78,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
           LOG_DBG("Key[%s] float: %3.2f %c %3.2f = %3.2f\n", key.c_str(), v, sign, inc, n);
           conf.put(key, String(n) );
         }else{
-          //String ? //conf.put(key, conf[key].c_str() + val );
+          //String inc? //conf.put(key, conf[key].c_str() + val );
           LOG_ERR("Key %s is not Numeric\n", key.c_str() );
           return;
         }
