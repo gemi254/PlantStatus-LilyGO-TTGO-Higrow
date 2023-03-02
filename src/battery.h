@@ -1,24 +1,27 @@
+// Battery adc volt measured with multimetr, after disconecting from board,
+// and value reported at end discharge, and value reported just after charging
+
 // Calc battery state
 float calcBattery(uint16_t AdcVolt){
-  // Battery adc volt measured with multimetr, after disconecting from board,
-  // and value reported at end discharge, and value reported just after charging
-  uint16_t bat_reading_low = 1551;
-  uint16_t bat_reading_high = 2370;
-
   data.batAdcVolt = AdcVolt;
-  // int vref = 1100;
+  
+  //Battery adc readings limits
+  float bat_reading_low = atof(conf["bat_adc_low"].c_str());
+  float bat_reading_high = atof(conf["bat_adc_high"].c_str());
+  
+  //Battery voltage limits
   float bat_volt_low = atof(conf["bat_reading_low"].c_str());
   float bat_volt_high = atof(conf["bat_reading_high"].c_str());
+
   float battery_voltage =  ( bat_volt_high - bat_volt_low ) / ( bat_reading_high - bat_reading_low ) * AdcVolt
         +  bat_volt_high - bat_reading_high * ( bat_volt_high - bat_volt_low ) / ( bat_reading_high - bat_reading_low ) ;//true volts
 
-  data.batVolt = battery_voltage;
-  
+  data.batVolt = battery_voltage;  
   //Battery volt percent
   float batPerc = 100.0F * ( battery_voltage - bat_volt_low ) / ( bat_volt_high - bat_volt_low);
   //Average from previous value
   float batPercAgv = batPerc;
-  if(lastBoot["bat_perc"] !="" ){
+  if(lastBoot["bat_perc"] !="" && lastBoot["bat_perc"] !="nan"){
      float lastPerc = (atof(lastBoot["bat_perc"].c_str()));
      batPercAgv = ((lastPerc + truncateFloat(batPerc, 0) ) / 2.0F);
   }  
@@ -31,6 +34,7 @@ float calcBattery(uint16_t AdcVolt){
   
 }
 // Calculate battery discharge days
+// Connected to the Internet about 150mA of current, the peak value 300mA, and the average is about 100mA
 float calcBatteryDays(){ 
   float daysOnBattery = 0.0F;
   if (onPower){    
@@ -41,7 +45,6 @@ float calcBatteryDays(){
       File f = STORAGE.open(LAST_BAT_INF, "w");
       f.print(data.batChargeDate);
       f.close();
-      //lastBoot.put("bat_charge_date", data.batChargeDate, true);
     }
     //Reset counters
     lastBoot.put("boot_cnt", "0",true);
@@ -52,7 +55,6 @@ float calcBatteryDays(){
     daysOnBattery = 0.0F;
     File f = STORAGE.open(LAST_BAT_INF,"r");
     if(f){
-      //data.batChargeDate = lastBoot["bat_charge_date"];
       data.batChargeDate = f.readString();
       f.close();
       time_t tmStart = convertDateTimeString(data.batChargeDate);
