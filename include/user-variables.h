@@ -46,19 +46,26 @@ const char* appConfigDict_json PROGMEM = R"~(
 },{
      "name": "soil_min",
     "label": "Soil Dry condition readings",
-  "default": "1535"     
-},{
+  "default": "1535"},{
      "name": "soil_max",
     "label": "Soil Wet condition readings",
-  "default": "3300"     
+  "default": "3300"
 },{
      "name": "bat_reading_low",
     "label": "Empty battery volt measured after disconecting from board",
-  "default": "3.024"     
+  "default": "3.024"
 },{
      "name": "bat_reading_high",
-    "label": "Full battery volt measured after disconecting from board ",
-  "default": "4.12"     
+    "label": "Full battery volt measured after charging and disconecting from board",
+  "default": "4.12"
+},{
+     "name": "bat_adc_low",
+    "label": "Empty battery adc reading",
+  "default": "1551"
+},{
+     "name": "bat_adc_high",
+    "label": "Full battery vadc reading",
+  "default": "2370"
 },{
 "seperator": "Sensors offsets"
 },{
@@ -186,3 +193,4 @@ const char* lastBootDict_json PROGMEM = R"~([
      "label": "Sleep error count. (leave blank)",
    "default": ""
   }])~";
+
