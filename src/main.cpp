@@ -26,7 +26,7 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.0.9"   // Auto adjust BH1750 Time register
+#define APP_VER "1.0.9a"  // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
 //#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
 //#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
 //#define APP_VER "1.0.6" // File system using cards, Update config assist
@@ -51,7 +51,7 @@
 
 #define LAST_BOOT_CONF "/lastboot.ini"
 #define LAST_BAT_INF   "/batinf.ini"
-#define CONNECT_TIMEOUT 10000
+#define CONNECT_TIMEOUT 8000
 #define MAX_SSID_ARR_NO 2 //Maximum ssid json will describe
 
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
@@ -102,7 +102,8 @@ unsigned long btPressMs = 0;              //Button pressed ms
 // Bool vars
 bool bmeFound = false;
 bool dhtFound = false;
-bool onPower = false;       //Is battery is charging
+bool onPower = false;              //Is battery is charging
+bool wifiConected = false;         //Wifi connected
 bool clearMqttRetain = false;
 static String chipID;              //Wifi chipid
 static String topicsPrefix;        //Subscribe to topics
@@ -195,13 +196,14 @@ void setup()
   //Sensor power control pin, must set high to enable measurements
   pinMode(POWER_CTRL, OUTPUT);
   digitalWrite(POWER_CTRL, 1);
-  delay(250);
+  delay(300);
 
   if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
     LOG_DBG("Wake up from sleep\n");
 
   //Measure bat with no wifi enabled
   adcVolt = analogRead(BAT_ADC); 
+  
   //User button check at startup  
   pinMode(USER_BUTTON, INPUT); 
   btState = !digitalRead(USER_BUTTON);
@@ -220,23 +222,27 @@ void setup()
     
   //Battery & charging status.
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
+
+  //Initialize on board sensors
+  //Wire can not be initialized at beginng, the bus is busy
+  if(!initSensors())
+    goToDeepSleep("initFail");
   
   //Start ST WiFi
-  connectToNetwork();
-
+  wifiConected = connectToNetwork();    
+  
   //Synchronize time if needed or every n loops
   if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % 3 ){
-    syncTime();
+    if(wifiConected) syncTime();
+    else if(getEpoch() > 10000) timeSynchronized = true;
   }else{
     timeSynchronized = true;
   }
 
-  //Initialize on board sensors
-  // wire can not be initialized at beginng, the bus is busy
-  if(!initSensors())
-    goToDeepSleep("initFail");
+  //Log sensors and go to sleep
+  if(!wifiConected) return;
 
-  //Connect to mqtt broker
+ //Connect to mqtt broker
   mqttConnect();
   
   //Listen config commands
@@ -262,6 +268,8 @@ void loop(){
     
     //Append to log
     logSensors();
+    
+    if(!wifiConected) goToDeepSleep("notConnected");
 
     //Send measurement to web sockets to update page
     wsSendSensors();
@@ -288,7 +296,7 @@ void loop(){
     //Count down
     sleepTimerCountdown = (sleepTimerCountdown > SLEEP_CHECK_INTERVAL) ? (sleepTimerCountdown -= SLEEP_CHECK_INTERVAL) : 0L;
     
-    LOG_INF("Sleep count down: %lu\n", sleepTimerCountdown);
+    LOG_DBG("Sleep count down: %lu\n", sleepTimerCountdown);
     if(isClientConnected(pServer)){
       LOG_DBG("No sleep, clients connected\n");
       ResetCountdownTimer();
