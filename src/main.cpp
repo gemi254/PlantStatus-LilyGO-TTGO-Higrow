@@ -26,7 +26,7 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.0.9a"  // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
+#define APP_VER "1.0.9b"  // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
 //#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
 //#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
 //#define APP_VER "1.0.6" // File system using cards, Update config assist
@@ -140,6 +140,8 @@ WebSocketsServer *pWebSocket = NULL;
   DS18B20 temp18B20(DS18B20_PIN);
 #endif
 
+#define CONFIG_ASSIST_LOG_PRINT_CUSTOM
+#define LOG_LEVEL '2'
 // App config 
 #include "configAssist.h"        //Setup assistant class
 ConfigAssist conf;               //Config class
@@ -169,7 +171,7 @@ void setup()
   }
   
   //Initialize config class
-  conf.init(appConfigDict_json);
+  conf.initJsonDict(appConfigDict_json);
   //Failed to load config or ssid empty
   if(!conf.valid() || conf["st_ssid1"]=="" ){ 
     //Start Access point server and edit config
@@ -212,14 +214,16 @@ void setup()
   //Free space?
   //listDir("/", 3);
   checkLogRotate();
-  
+ 
   //Load last boot ini file
-  lastBoot.init(lastBootDict_json, LAST_BOOT_CONF);  
+  //lastBoot.init(lastBootDict_json, LAST_BOOT_CONF); 
+  //STORAGE.remove(LAST_BOOT_CONF); 
+  lastBoot.init(LAST_BOOT_CONF);  
   if(!lastBoot.valid()){
     LOG_ERR("Invalid lastBoot file: %s\n", LAST_BOOT_CONF);
     STORAGE.remove(LAST_BOOT_CONF);
   } 
-    
+     
   //Battery & charging status.
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
 
