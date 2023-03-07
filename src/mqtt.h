@@ -2,7 +2,13 @@
 //#define DEBUG_MQTT    //Uncomment to serial print DBG messages rather than publish mqtt messages
 #if defined(DEBUG_MQTT)
   #undef LOG_DBG  
-  #define LOG_DBG(format, ...) logPrint(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
+  #define LOG_DBG(format, ...) logPrint("0", DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
+  #undef LOG_ERR  
+  #define LOG_ERR(format, ...) logPrint("0", DBG_FORMAT(format,"ERR"), ##__VA_ARGS__)
+  #undef LOG_WRN  
+  #define LOG_WRN(format, ...) logPrint("0", DBG_FORMAT(format,"WRN"), ##__VA_ARGS__)
+  #undef LOG_INF  
+  #define LOG_INF(format, ...) logPrint("0", DBG_FORMAT(format,"INF"), ##__VA_ARGS__) 
 #endif
 
 // Handle Mqtt retain commands
