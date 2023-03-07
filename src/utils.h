@@ -145,19 +145,22 @@ void reset(){
 }
 
 //Logging to file or serial
-#define MAX_OUT 200
-static char fmtBuf[MAX_OUT];
-static char outBuf[MAX_OUT];
-static va_list arglist;
-
-void logPrint(const char *format, ...) {
+#ifdef CONFIG_ASSIST_LOG_PRINT_CUSTOM 
+static void logPrint(const char *level, const char *format, ...){  
+  if(level[0] > LOG_LEVEL) return;
+ 
+  #define MAX_OUT 200
+  static char fmtBuf[MAX_OUT];
+  static char outBuf[MAX_OUT];
+  static va_list arglist;
   strncpy(fmtBuf, format, MAX_OUT);
   fmtBuf[MAX_OUT - 1] = 0;
   va_start(arglist, format); 
   vsnprintf(outBuf, MAX_OUT, fmtBuf, arglist);
   va_end(arglist);
-  size_t msgLen = strlen(outBuf);
+  //size_t msgLen = strlen(outBuf);
   Serial.print(outBuf);
   if (logFile) 
     dbgLog.print(outBuf);  
 }
+#endif
