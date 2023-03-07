@@ -1,10 +1,4 @@
 
-#define DEBUG_FILES
-#if defined(DEBUG_FILES)
-  #undef LOG_DBG
-  #define LOG_DBG(format, ...) logPrint(DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
-#endif
-
 #define MIN_STORAGE_SPACE (64 * 1024)  //Minimum allowed space for log rotate to work
 #define DATA_DIR "/data"                //Dicectory to save data logs
 
@@ -151,7 +145,7 @@ void removeFolder(String dirName){
 // Check an delete logs to save space
 void checkLogRotate(){
   size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
-  LOG_DBG("Storage, free: %lu K\n", (free/1024));
+  LOG_INF("Storage, free: %lu K\n", (free/1024));
   if(free < MIN_STORAGE_SPACE){
     LOG_WRN("Storage is running low, free: %lu\n", free);
     String oldestDir = getOldestDir(DATA_DIR);    
