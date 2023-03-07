@@ -114,6 +114,11 @@ let hbTimer = null;
 let refreshInterval = 10000;
 document.addEventListener('DOMContentLoaded', initWebSocket());
 
+// close web socket on leaving page
+window.addEventListener('beforeunload', function (event) {
+     if (ws) closeWS();
+}); 
+
 // define websocket handling
 function initWebSocket() {  
   console.log("Connect to: " + wsServer);
@@ -123,7 +128,11 @@ function initWebSocket() {
   ws.onmessage = onMessage; 
   ws.onerror = onError;
 }
-
+async function closeWS() {
+  ws.send('K');
+  await sleep(500);
+  ws.close();
+}
 function sendCmd(reqStr) {
   ws.send(reqStr);
   console.log("Cmd: " + reqStr);
