@@ -52,20 +52,20 @@ const char* appConfigDict_json PROGMEM = R"~(
   "default": "3300"
 },{
      "name": "bat_reading_low",
-    "label": "Empty battery volt measured after disconecting from board",
-  "default": "3.024"
+    "label": "Empty battery volt measured after disconecting from board (2.92)",
+  "default": "2.92"
 },{
      "name": "bat_reading_high",
-    "label": "Full battery volt measured after charging and disconecting from board",
-  "default": "4.12"
+    "label": "Full battery volt measured after charging and disconecting from board (4.19)",
+  "default": "4.19"
 },{
      "name": "bat_adc_low",
-    "label": "Empty battery adc reading",
-  "default": "1551"
+    "label": "Empty battery adc reading (1375)",
+  "default": "1375"
 },{
      "name": "bat_adc_high",
-    "label": "Full battery vadc reading",
-  "default": "2370"
+    "label": "Full battery vadc reading (float:2280 max: 2644)",
+  "default": "2280"
 },{
 "seperator": "Sensors offsets"
 },{
@@ -168,29 +168,3 @@ const char* appConfigDict_json PROGMEM = R"~(
     "label": "Time to deep sleep if any error Wifi, MQTT connections (Seconds)",
   "default": "300"
 }])~";
-
-
-//Last boot save variables
-const char* lastBootDict_json PROGMEM = R"~([
-  {
-      "name": "bat_perc",
-     "label": "The battery voltage. (leave blank)",
-   "default": ""
-  },{
-      "name": "bat_voltage",
-     "label": "The battery voltage. (leave blank)",
-   "default": ""
-  },{
-      "name": "sleep_reason",
-     "label": "Sleep reason. (leave blank)",
-   "default": ""
-  },{
-      "name": "boot_cnt",
-     "label": "Sleep count. (leave blank)",
-   "default": ""
-  },{     
-    "name": "boot_cnt_err",
-     "label": "Sleep error count. (leave blank)",
-   "default": ""
-  }])~";
-
