@@ -251,18 +251,24 @@ PROGMEM const char HTML_PAGE_HOME_SEP[] = R"=====(
         <h2>Device Information</h2>
         <table>     
 )=====";
-
+PROGMEM const char HTML_PAGE_HOME_BUTTON_VIEWLOG[] = R"=====(
+  <button title='View debug log' onClick="window.open('/cmd?view={log}', '_blank');">Debug log</button>
+)=====";
+PROGMEM const char HTML_PAGE_HOME_BUTTON_RESETLOG[] = R"=====(
+  <button title='Reset debug log file. All data will be lost.' onClick="window.location.href ='/cmd?resetLog={log}';">Remove log</button>
+)=====";
 // Template for page end
 PROGMEM const char HTML_PAGE_HOME_END[] = R"=====(
       </table>
       </div>
       <div class="card">
-        <button title='View sensors daily log' onClick="window.open('/cmd?view=', '_blank');">Day</button>
-        <button title='View sensors monthly logs' onClick='window.location.href="/fs?dir=/data"'>Logs</button>
-        <button title='Send device mqtt discovery message to Homeassistant' onClick='window.location.href="/cmd?hasDiscovery=1"'>Discover</button>
+        <button title='View sensors hourly log' onClick="window.open('/cmd?view=', '_blank');">Hourly</button>
+        <button title='View sensors daily logs' onClick='window.location.href="/fs?dir=/data"'>Daily</button>
         <button title='Configure this device' onClick='window.location.href="/cfg"'>Configure</button>
-        <button title='Reboot device' onClick='window.location.href="/cmd?reboot=1"'>Reboot</button>
-        <button title='Factory defaults' onClick='window.location.href="/cmd?reset=1"'>Reset</button>
+        <button title='Reboot device' onClick='if(!confirm("Reboot esp?")) return false; else window.location.href="/cmd?reboot=1;"'>Reboot</button>
+        <button title='Send device mqtt discovery messages to Homeassistant' onClick='window.location.href="/cmd?hasDiscovery=1"'>Discovery</button>
+        <button title='Reset to factory defaults. All data will be lost!' onClick='if(!confirm("Reset to factory defaults? All data will be lost!")) return false; else window.location.href="/cmd?reset=1"'>Defaults</button>
+        <!--Custom-->
       </div>
     </div>
   </br>
