@@ -1,4 +1,3 @@
-
 // Initialize on board sensors according config
 bool initSensors(){
   //Temp/hum sensors
@@ -156,6 +155,7 @@ void readSensors(){
 
   //Correction
   if(data.batPerc > 100.0F) data.batPerc = 100.0F;
+  else if(data.batPerc < 0.0F) data.batPerc = 0.0F;
   
   //Lux level
   float lux = readLightValue();
@@ -200,6 +200,9 @@ void logSensors(){
     line += "lux" + sep;
     line += "soil" + sep;
     line += "salt" + sep;
+#ifdef DEBUG_BATTERY    
+    line += "batAdc";
+#endif    
     line += "batPerc";
     line +="\n";
   }
@@ -210,6 +213,9 @@ void logSensors(){
   line += String(data.lux + atof(conf["offs_lux"].c_str()), 1) + sep;
   line += (data.soil + conf["offs_soil"].toInt()) + sep;
   line += (data.salt + conf["offs_salt"].toInt()) + sep;
+  #ifdef DEBUG_BATTERY    
+    line += String(data.batAdcVolt) + sep;
+  #endif
   line += String(data.batPerc, 0);
   line +="\n";
   writeFile(fullPath.c_str(), line.c_str());
