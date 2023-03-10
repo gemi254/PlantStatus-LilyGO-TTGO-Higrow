@@ -71,7 +71,8 @@ bool connectToNetwork(){
     st_pass = conf["st_pass" + String(i)];
 
     //Wifi down, reconnect here
-    LOG_INF("Wifi ST connecting to: %s \n",st_ssid.c_str());
+    //LOG_INF("Wifi ST connecting to: %s, %s \n",st_ssid.c_str(), st_pass.c_str());
+    LOG_INF("Wifi ST connecting to: %s\n",st_ssid.c_str());
     WiFi.begin(st_ssid.c_str(), st_pass.c_str());      
     int col = 0;
     uint32_t startAttemptTime = millis();      
@@ -172,6 +173,13 @@ static void handleRoot(){
 
   String end(HTML_PAGE_HOME_END);
   end.replace("{appVer}", APP_VER );
+  if(STORAGE.exists(LOG_FILENAME)){
+    String btView(HTML_PAGE_HOME_BUTTON_VIEWLOG);
+    String btReset(HTML_PAGE_HOME_BUTTON_RESETLOG);
+    btView.replace("{log}", LOG_FILENAME);
+    btReset.replace("{log}", LOG_FILENAME);
+    end.replace("<!--Custom-->", "<br>\n" + btView + "\n" + btReset);
+  }  
   pServer->sendContent(end);
   //pServer->sendContent(HTML_PING_SCRIPT);
   pServer->client().flush(); 
