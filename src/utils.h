@@ -138,9 +138,10 @@ void ResetCountdownTimer(){
 
 // Remove all ini files 
 void reset(){
-  LOG_DBG("Removing ini files.");
-  listDir("/", 1);
-  lastBoot.deleteConfig(LAST_BOOT_CONF);
+  LOG_WRN("Removing all ini files.");
+  //listDir("/", 1);
+  lastBoot.deleteConfig(LAST_BOOT_INI);
+  STORAGE.remove(LAST_BAT_INI);
   conf.deleteConfig();
 }
 
