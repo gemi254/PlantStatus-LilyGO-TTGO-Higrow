@@ -6,7 +6,7 @@ void goToDeepSleep(const char *reason, bool error=true)
   clearMqttRetainMsg();
 
   if(onPower && error){
-    LOG_INF("OnPower, no sleep on error: %s\n", reason);
+    LOG_WRN("OnPower, no sleep on error: %s\n", reason);
     return;
   } 
   mqttClient.disconnect();
@@ -29,7 +29,7 @@ void goToDeepSleep(const char *reason, bool error=true)
   lastBoot.put("bat_voltage", String(data.batVolt,2), true);
   lastBoot.put("bat_perc", String(data.batPerc,0), true); 
   //Save last boot vars
-  lastBoot.saveConfigFile(LAST_BOOT_CONF);
+  lastBoot.saveConfigFile(LAST_BOOT_INI);
 
   LOG_WRN("Sleep, ms: %lu, reason: %s, Boots: %u, BootsErr: %u, millis: %lu\n", sleepTime, reason, lastBoot["boot_cnt"].toInt(), lastBoot["boot_cnt_err"].toInt(), (millis() - appStart));
   Serial.flush();
