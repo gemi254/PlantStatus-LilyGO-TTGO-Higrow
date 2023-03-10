@@ -1,10 +1,10 @@
-// Battery adc volt measured with multimetr, after disconecting from board,
-// and value reported at end discharge, and value reported just after charging
-
-// Calc battery state
+// Calc battery state. Higrow uses TP4054 linear charger
 float calcBattery(uint16_t AdcVolt){
   data.batAdcVolt = AdcVolt;
   
+  // Battery adc volt measured with multimetr, after disconecting from board,
+  // and value reported at end discharge, and value reported just after charging
+
   //Battery adc readings limits
   float bat_reading_low = atof(conf["bat_adc_low"].c_str());
   float bat_reading_high = atof(conf["bat_adc_high"].c_str());
@@ -42,7 +42,7 @@ float calcBatteryDays(){
     //Is time synced?
     if(curDate.length()>0){
       data.batChargeDate = curDate;
-      File f = STORAGE.open(LAST_BAT_INF, "w");
+      File f = STORAGE.open(LAST_BAT_INI, "w");
       f.print(data.batChargeDate);
       f.close();
     }
@@ -53,7 +53,7 @@ float calcBatteryDays(){
   }else{ //Discharging
     onPower = false;
     daysOnBattery = 0.0F;
-    File f = STORAGE.open(LAST_BAT_INF,"r");
+    File f = STORAGE.open(LAST_BAT_INI,"r");
     if(f){
       data.batChargeDate = f.readString();
       f.close();
