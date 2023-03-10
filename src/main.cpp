@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <sstream>
 #include <vector>
+#include <regex>
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <BH1750.h>
@@ -26,7 +27,8 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.0.9b"  // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
+#define APP_VER "1.1.0"   // Save config using javascript async requests. Battery debug calibration
+//#define APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
 //#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
 //#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
 //#define APP_VER "1.0.6" // File system using cards, Update config assist
@@ -49,13 +51,14 @@
 #define USER_BUTTON 35
 #define DS18B20_PIN 21
 
-#define LAST_BOOT_CONF "/lastboot.ini"
-#define LAST_BAT_INF   "/batinf.ini"
+#define LAST_BOOT_INI "/lastboot.ini"
+#define LAST_BAT_INI   "/batinf.ini"
 #define CONNECT_TIMEOUT 8000
 #define MAX_SSID_ARR_NO 2 //Maximum ssid json will describe
 
+#define DEBUG_BATTERY
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
-#define BATT_PERC_ONPOWER (105.0F)
+#define BATT_PERC_ONPOWER (100.0F)
 
 #define uS_TO_S_FACTOR 1000000ULL    //Conversion factor for micro seconds to seconds
 #define SLEEP_CHECK_INTERVAL   1000  //Check if it is time to sleep (millis)
@@ -77,7 +80,7 @@ struct SensorData
   //String saltadvice;
   float batPerc;  
   float batVolt;
-  uint8_t batAdcVolt;
+  uint16_t batAdcVolt;
   String batChargeDate;
   float batDays;
   float pressure;
@@ -104,12 +107,15 @@ bool bmeFound = false;
 bool dhtFound = false;
 bool onPower = false;              //Is battery is charging
 bool wifiConected = false;         //Wifi connected
+bool apStarted = false;            //AP started
 bool clearMqttRetain = false;
 static String chipID;              //Wifi chipid
 static String topicsPrefix;        //Subscribe to topics
 static uint8_t apClients = 0;      //Connected ap clients
 
 // Log to file
+#define CONFIG_ASSIST_LOG_PRINT_CUSTOM
+#define LOG_LEVEL '2' //Errors & Warnings only
 #define LOG_FILENAME "/log"
 bool logFile = false;
 File dbgLog;                         
@@ -140,8 +146,6 @@ WebSocketsServer *pWebSocket = NULL;
   DS18B20 temp18B20(DS18B20_PIN);
 #endif
 
-#define CONFIG_ASSIST_LOG_PRINT_CUSTOM
-#define LOG_LEVEL '2'
 // App config 
 #include "configAssist.h"        //Setup assistant class
 ConfigAssist conf;               //Config class
@@ -161,7 +165,7 @@ void setup()
 {  
   appStart = millis(); //Application start time
   chipID = getChipID();
-  
+ 
   Serial.begin(230400);
   Serial.print("\n\n\n\n");
   Serial.flush();
@@ -178,6 +182,7 @@ void setup()
     pServer = new WebServer(80);
     conf.setup(*pServer, handleAssistRoot);
     ResetCountdownTimer();
+    apStarted = true;
     return;
   }
 
@@ -195,11 +200,12 @@ void setup()
   } 
   
   LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);
+
   //Sensor power control pin, must set high to enable measurements
   pinMode(POWER_CTRL, OUTPUT);
   digitalWrite(POWER_CTRL, 1);
-  delay(300);
-
+  delay(100);
+  
   if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
     LOG_DBG("Wake up from sleep\n");
 
@@ -216,22 +222,17 @@ void setup()
   checkLogRotate();
  
   //Load last boot ini file
-  //lastBoot.init(lastBootDict_json, LAST_BOOT_CONF); 
-  //STORAGE.remove(LAST_BOOT_CONF); 
-  lastBoot.init(LAST_BOOT_CONF);  
+  //lastBoot.init(lastBootDict_json, LAST_BOOT_INI); 
+  //STORAGE.remove(LAST_BOOT_INI); 
+  lastBoot.init(LAST_BOOT_INI);  
   if(!lastBoot.valid()){
-    LOG_ERR("Invalid lastBoot file: %s\n", LAST_BOOT_CONF);
-    STORAGE.remove(LAST_BOOT_CONF);
+    LOG_ERR("Invalid lastBoot file: %s\n", LAST_BOOT_INI);
+    STORAGE.remove(LAST_BOOT_INI);
   } 
      
   //Battery & charging status.
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
 
-  //Initialize on board sensors
-  //Wire can not be initialized at beginng, the bus is busy
-  if(!initSensors())
-    goToDeepSleep("initFail");
-  
   //Start ST WiFi
   wifiConected = connectToNetwork();    
   
@@ -242,6 +243,10 @@ void setup()
   }else{
     timeSynchronized = true;
   }
+  //Initialize on board sensors
+  //Wire can not be initialized at beginng, the bus is busy
+  if(!initSensors())
+    goToDeepSleep("initFail");
 
   //Log sensors and go to sleep
   if(!wifiConected) return;
@@ -273,7 +278,7 @@ void loop(){
     //Append to log
     logSensors();
     
-    if(!wifiConected) goToDeepSleep("notConnected");
+    if(!apStarted && !wifiConected) goToDeepSleep("notConnected");
 
     //Send measurement to web sockets to update page
     wsSendSensors();
@@ -312,11 +317,14 @@ void loop(){
 
     sleepCheckMs = millis();  
   }
-  
+  //Button not working on AP?
+  if(apStarted) return;
   //Check user button
+  #define RESET_CONFIGS_INTERVAL 10000L
   btState = !digitalRead(USER_BUTTON);
   if(btState){
-    btPressMs = millis();
+    //LOG_DBG("bt: %i\n", btState);
+    if(!btPress) btPressMs = millis();
     btPress = true;
     ResetCountdownTimer();
   }else if(btPress){ //Was pressed and released
@@ -324,6 +332,12 @@ void loop(){
     sensorReadMs = millis() + SENSORS_READ_INTERVAL;
     btPress = false;
     LOG_DBG("Button press for: %lu\n", millis() - btPressMs);
+    //Factory reset 
+    if(millis() - btPressMs > RESET_CONFIGS_INTERVAL){
+      reset();
+      delay(1009);
+      ESP.restart();
+    }
     startWebSever();
   }
   //Clear mqtt retained?
