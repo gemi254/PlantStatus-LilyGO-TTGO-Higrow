@@ -212,6 +212,9 @@ String getJsonBuff(){
   // plant["wifissid"] = WiFi.SSID();
   plant["batChargeDate"] = data.batChargeDate;
   plant["batPerc"] = data.batPerc;
+#ifdef DEBUG_BATTERY  
+  plant["batADC"] = data.batAdcVolt;
+#endif  
   plant["batVolt"] = truncateFloat(data.batVolt, 2);
   plant["batDays"] = truncateFloat(data.batDays, 1);
   //plant["batLastPerc"] = lastBoot["bat_perc"];
