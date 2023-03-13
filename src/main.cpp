@@ -27,7 +27,7 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.1.0"   // Save config using javascript async requests. Battery debug calibration
+#define APP_VER "1.1.0a"  // Save config using javascript async requests. Battery debug calibration
 //#define APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
 //#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
 //#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
@@ -164,6 +164,12 @@ ConfigAssist lastBoot;           //Save last boot vars
 void setup()
 {  
   appStart = millis(); //Application start time
+ 
+  //Sensor power control pin, must set high to enable measurements
+  pinMode(POWER_CTRL, OUTPUT);
+  digitalWrite(POWER_CTRL, 1);
+  delay(100);
+  
   chipID = getChipID();
  
   Serial.begin(230400);
@@ -200,12 +206,7 @@ void setup()
   } 
   
   LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);
-
-  //Sensor power control pin, must set high to enable measurements
-  pinMode(POWER_CTRL, OUTPUT);
-  digitalWrite(POWER_CTRL, 1);
-  delay(100);
-  
+ 
   if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
     LOG_DBG("Wake up from sleep\n");
 
