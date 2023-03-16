@@ -38,8 +38,7 @@ bool initSensors(){
 }
 
 // READ Salt
-uint32_t readSalt()
-{
+uint32_t readSalt(){
   uint8_t samples = 120;
   uint32_t humi = 0;
   uint16_t array[120];
@@ -69,8 +68,7 @@ uint8_t readSoil(){
   return soilM;
 }
 
-float readSoilTemp()
-{
+float readSoilTemp(){
   float temp;
   //READ Soil Temperature
   #ifdef USE_18B20_TEMP_SENSOR
@@ -89,7 +87,6 @@ lux <    10 ==> MTreg = 138
 */
 float readLightValue(){
     float lux = lightMeter.readLightLevel();
-
     #ifdef LUX_AUTOAJUST
     if (lux < 0){ //-1 : no valid return value -2 : sensor not configured
         LOG_ERR("Failed to read BH1750!\n");
@@ -201,7 +198,7 @@ void logSensors(){
     line += "soil" + sep;
     line += "salt" + sep;
 #ifdef DEBUG_BATTERY    
-    line += "batAdc";
+    line += "batAdc" + sep;
 #endif    
     line += "batPerc";
     line +="\n";
