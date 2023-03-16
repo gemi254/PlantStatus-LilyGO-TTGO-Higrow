@@ -154,7 +154,7 @@ void mqttSetup(String identyfikator, String chipId, String uom = "x", String dc 
       Serial.println();
   #endif
 
-bool retained = false;
+bool retained = true;
 
 if (mqttClient.publish(topic_c, buffer_c, retained)) {
     LOG_DBG("Message published successfully\n");
