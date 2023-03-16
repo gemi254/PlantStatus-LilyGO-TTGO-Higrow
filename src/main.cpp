@@ -27,7 +27,7 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.1.0a"  // Save config using javascript async requests. Battery debug calibration
+#define APP_VER "1.1.0b"  // Save config using javascript async requests. Battery debug calibration
 //#define APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
 //#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
 //#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
@@ -56,7 +56,7 @@
 #define CONNECT_TIMEOUT 8000
 #define MAX_SSID_ARR_NO 2 //Maximum ssid json will describe
 
-#define DEBUG_BATTERY
+//#define DEBUG_BATTERY              //Uncomment to log bat adc values
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
 #define BATT_PERC_ONPOWER (100.0F)
 
