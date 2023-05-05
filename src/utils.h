@@ -132,7 +132,8 @@ bool isInt(const std::string& str)
 }
 
 // Reset timer used for sleep
-void ResetCountdownTimer(){
+void ResetCountdownTimer(const char *reason){
+  //LOG_DBG("Reset countdown:  %s.\n",reason);
   sleepTimerCountdown = SLEEP_DELAY_INTERVAL; 
 }
 
