@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <sstream>
 #include <vector>
 #include <regex>
 #include <ArduinoJson.h>
@@ -8,7 +7,6 @@
 #include <DHT.h>
 #include <WiFi.h>
 #include <NTPClient.h>
-#include <SD.h>
 #include <SPI.h>
 #include <PubSubClient.h>
 #include <Esp.h>
@@ -27,7 +25,8 @@
 #include <ESPmDNS.h>
 #include "user-variables.h"
 
-#define APP_VER "1.1.0b"  // Save config using javascript async requests. Battery debug calibration
+#define APP_VER "1.1.1"   // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
+//#define APP_VER "1.1.0" // Save config using javascript async requests. Battery debug calibration
 //#define APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
 //#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
 //#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
@@ -60,10 +59,12 @@
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
 #define BATT_PERC_ONPOWER (100.0F)
 
-#define uS_TO_S_FACTOR 1000000ULL    //Conversion factor for micro seconds to seconds
-#define SLEEP_CHECK_INTERVAL   1000  //Check if it is time to sleep (millis)
-#define SLEEP_DELAY_INTERVAL   30000 //After this time with no activity go to sleep
-#define SENSORS_READ_INTERVAL  30000 //Sensors read inverval in milliseconds on loop mode, 30 sec 
+#define uS_TO_S_FACTOR 1000000ULL     //Conversion factor for micro seconds to seconds
+#define SLEEP_CHECK_INTERVAL   1000   //Check if it is time to sleep (millis)
+#define SLEEP_DELAY_INTERVAL   30000  //After this time with no activity go to sleep
+#define SENSORS_READ_INTERVAL  30000  //Sensors read inverval in milliseconds on loop mode, 30 sec 
+#define RESET_CONFIGS_INTERVAL 10000L //Interval press user button to factory defaults.
+  
 // json sensors data 
 struct SensorData
 {
@@ -106,7 +107,7 @@ unsigned long btPressMs = 0;              //Button pressed ms
 bool bmeFound = false;
 bool dhtFound = false;
 bool onPower = false;              //Is battery is charging
-bool wifiConected = false;         //Wifi connected
+bool wifiConnected = false;        //Wifi connected
 bool apStarted = false;            //AP started
 bool clearMqttRetain = false;
 static String chipID;              //Wifi chipid
@@ -115,7 +116,8 @@ static uint8_t apClients = 0;      //Connected ap clients
 
 // Log to file
 #define CONFIG_ASSIST_LOG_PRINT_CUSTOM
-#define LOG_LEVEL '2' //Errors & Warnings only
+#define LOG_LEVEL '2' //Errors & Warnings
+//#define LOG_LEVEL '3' //Errors & Warnings & info
 #define LOG_FILENAME "/log"
 bool logFile = false;
 File dbgLog;                         
@@ -165,14 +167,16 @@ void setup()
 {  
   appStart = millis(); //Application start time
  
-  //Sensor power control pin, must set high to enable measurements
+  //Power control pin, must set high to enable measurements
   pinMode(POWER_CTRL, OUTPUT);
   digitalWrite(POWER_CTRL, 1);
+  //Custom button setup
+  pinMode(USER_BUTTON, INPUT); 
   delay(100);
   
   chipID = getChipID();
  
-  Serial.begin(230400);
+  Serial.begin(115200);
   Serial.print("\n\n\n\n");
   Serial.flush();
   //Initiate SPIFFS and Mount file system
@@ -186,12 +190,21 @@ void setup()
   if(!conf.valid() || conf["st_ssid1"]=="" ){ 
     //Start Access point server and edit config
     pServer = new WebServer(80);
-    conf.setup(*pServer, handleAssistRoot);
-    ResetCountdownTimer();
+    //Start ap and register configAssist handlers
+    conf.setup(*pServer, true);
+    
+    //Register app webserver handlers
+    registerHandlers();
+    
+    //Start websockets
+    startWebSockets();
+    
+    ResetCountdownTimer("AP start");
     apStarted = true;
+    initSensors();    
     return;
   }
-
+  
   //Time is ok on wake up but needs to be configured with tz
   setenv("TZ", conf["time_zone"].c_str(), 1);
   
@@ -214,7 +227,6 @@ void setup()
   adcVolt = analogRead(BAT_ADC); 
   
   //User button check at startup  
-  pinMode(USER_BUTTON, INPUT); 
   btState = !digitalRead(USER_BUTTON);
   LOG_DBG("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
   
@@ -235,11 +247,11 @@ void setup()
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
 
   //Start ST WiFi
-  wifiConected = connectToNetwork();    
+  wifiConnected = connectToNetwork();    
   
   //Synchronize time if needed or every n loops
   if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % 3 ){
-    if(wifiConected) syncTime();
+    if(wifiConnected) syncTime();
     else if(getEpoch() > 10000) timeSynchronized = true;
   }else{
     timeSynchronized = true;
@@ -250,9 +262,9 @@ void setup()
     goToDeepSleep("initFail");
 
   //Log sensors and go to sleep
-  if(!wifiConected) return;
+  if(!wifiConnected) return;
 
- //Connect to mqtt broker
+  //Connect to mqtt broker
   mqttConnect();
   
   //Listen config commands
@@ -262,7 +274,7 @@ void setup()
   btState = !digitalRead(USER_BUTTON);
   if(btState){
     startWebSever(); 
-    ResetCountdownTimer();
+    ResetCountdownTimer("Webserver start");
   }
 }
 
@@ -273,13 +285,16 @@ void loop(){
   if(pWebSocket) pWebSocket->loop();
   //Read and publish sensors  
   if (millis() - sensorReadMs >= SENSORS_READ_INTERVAL){
+    //Is time sync
+    if(getEpoch() > 10000) timeSynchronized = true;
+
     //Read sensor values,
     readSensors();    
     
     //Append to log
     logSensors();
     
-    if(!apStarted && !wifiConected) goToDeepSleep("notConnected");
+    if(!apStarted && !wifiConnected) goToDeepSleep("notConnected");
 
     //Send measurement to web sockets to update page
     wsSendSensors();
@@ -297,19 +312,19 @@ void loop(){
     adcVolt = analogRead(BAT_ADC); 
     
     //Reset loop millis
-    //appStart = millis(); 
     sensorReadMs = millis();
   }
 
   //Check if it is time to sleep
   if (millis() - sleepCheckMs >= SLEEP_CHECK_INTERVAL){
-    //Count down
+    //Sleep count down
     sleepTimerCountdown = (sleepTimerCountdown > SLEEP_CHECK_INTERVAL) ? (sleepTimerCountdown -= SLEEP_CHECK_INTERVAL) : 0L;
     
     LOG_DBG("Sleep count down: %lu\n", sleepTimerCountdown);
+    
     if(isClientConnected(pServer)){
-      LOG_DBG("No sleep, clients connected\n");
-      ResetCountdownTimer();
+      //LOG_DBG("No sleep, clients connected\n");
+      ResetCountdownTimer("Clients connected");
     }
     //Timeout -> sleep  
     if(sleepTimerCountdown <= 0L ){      
@@ -318,16 +333,14 @@ void loop(){
 
     sleepCheckMs = millis();  
   }
-  //Button not working on AP?
-  if(apStarted) return;
+
   //Check user button
-  #define RESET_CONFIGS_INTERVAL 10000L
   btState = !digitalRead(USER_BUTTON);
   if(btState){
     //LOG_DBG("bt: %i\n", btState);
     if(!btPress) btPressMs = millis();
     btPress = true;
-    ResetCountdownTimer();
+    ResetCountdownTimer("Button down");
   }else if(btPress){ //Was pressed and released
     //Update sensors 
     sensorReadMs = millis() + SENSORS_READ_INTERVAL;
