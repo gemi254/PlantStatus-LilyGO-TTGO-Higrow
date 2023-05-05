@@ -20,12 +20,23 @@ PROGMEM const char CONFIGASSIST_HTML_MESSAGE[] = R"=====(
 <html lang="en" class="">
     <head>
       <meta charset='utf-8'>
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
         <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
         <title>{title}</title>
         <script>
-          setTimeout(function() {
+        document.addEventListener('DOMContentLoaded', function (event) {
+            setTimeout(function() {
                       location.href = '{url}';
                   }, {refresh});
+            const baseHost = document.location.origin;
+            const url = baseHost + "/cfg?_RBT_CONFIRM=1";
+            try{
+              console.log('Restarting')
+              const response = fetch(encodeURI(url));
+            } catch (e) {
+              console.log(e)
+            }
+        });
         </script>                  
     </head>
     <body>
@@ -367,6 +378,9 @@ PROGMEM const char CONFIGASSIST_HTML_SCRIPT[] = R"=====(
 document.addEventListener('DOMContentLoaded', function (event) {
   const $ = document.querySelector.bind(document);
   const $$ = document.querySelectorAll.bind(document);
+  let scanTimer = null;
+  let setTimeTimer = null;
+  let refreshInterval = 15000;
 
   function updateRange(range) {
     const rangeVal = $('#'+range.id).parentElement.children.rangeVal;
@@ -384,8 +398,6 @@ document.addEventListener('DOMContentLoaded', function (event) {
   document.addEventListener("input", function (event) {
     if (event.target.type === 'range') updateRange(event.target);
   });
-
-  
 
   // recalc range markers positions 
   window.addEventListener('resize', function (event) {
@@ -420,25 +432,86 @@ document.addEventListener('DOMContentLoaded', function (event) {
 
   // Save config before unload
   window.addEventListener('beforeunload', function (event) {
-      updateKey("_SAVE", 1);
-      console.log("Unload.. saved");
+    updateKey("_SAVE", 1);
+    console.log("Unload.. saved");
   });
-  
+
   async function updateKey(key, value) {      
-      if(value == null ) return;      
-      const baseHost = document.location.origin;
-      const url = baseHost + "/cfg?" + key + "=" + value
-      if(key=="_RST"||key=="_RBT"){
-        document.location = url;
-      }
-      const response = await fetch(encodeURI(url));
-      if (!response.ok){
-        const html = await response.text();
-        if(html!="") $('#msg').innerHTML = html;
-      }      
+    if(value == null ) return;      
+    const baseHost = document.location.origin;
+    const url = baseHost + "/cfg?" + key + "=" + value
+    if(key=="_RST" || key=="_RBT"){
+      document.location = url;
     }
+    const response = await fetch(encodeURI(url));
+    if (!response.ok){
+      const html = await response.text();
+      if(html!="") $('#msg').innerHTML = html;
+    }      
+  }
+  /*{SUB_SCRIPT}*/   
 })
 </script>
+)=====";
+
+PROGMEM const char CONFIGASSIST_HTML_SCRIPT_TIME_SYNC[] = R"=====(
+  async function sendTime() {
+    let now = new Date();
+    let nowUTC = Math.floor(now.getTime() / 1000);
+    let offs = now.getTimezoneOffset()/60;
+    const baseHost = document.location.origin;
+    const url = baseHost + "/cfg?clockUTC" + "=" + nowUTC + "&offs=" + offs
+    const response = await fetch(encodeURI(url));
+    if (!response.ok){
+      const html = await response.text();
+      if(html!="" && $('#msg')) $('#msg').innerHTML = html;
+    }
+  }
+  
+  setTimeTimer = setTimeout(sendTime, 200);  
+)=====";
+
+PROGMEM const char CONFIGASSIST_HTML_SCRIPT_WIFI_SCAN[] = R"=====(
+async function getWifiScan() {      
+    const baseHost = document.location.origin;
+    const url = baseHost + "/scan"
+    try{
+      const response = await fetch(encodeURI(url));
+      var json = await response.json();       
+      if (!response.ok){        
+        console.log('Error:', json)
+      }else{
+        if(json.length == 1 && Object.keys(json[0]).length < 2 ) return;
+        json = json.sort((a, b) => {
+          if (a.rssi > b.rssi) {
+            return -1;
+          }
+        });
+        var options = "";
+        for(n in json){
+          options  += '<option value="' + json[n].ssid + '"></option>\n'
+        }
+
+        const ed = $('#st_ssid') || $('#st_ssid1')
+        const td = ed.parentElement
+        if(!ed.getAttribute('list')){
+          list = document.createElement('datalist')
+          list.id = 'st_wifi_list'
+          td.appendChild(list)
+          $('#st_wifi_list').innerHTML =  options
+          ed.setAttribute('list','st_wifi_list')
+        }else{
+          $('#st_wifi_list').innerHTML =  options
+        }
+      }
+    } catch(e) {
+      console.log(e)
+    } 
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(getWifiScan, refreshInterval);
+  }
+  
+  scanTimer = setTimeout(getWifiScan, 2000); 
 )=====";
 
 //Template for one input text box
