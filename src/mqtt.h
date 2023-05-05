@@ -43,10 +43,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if(key=="sleep"){
     if(val=="0"){
       //Don't sleep. Wait for connection
-      ResetCountdownTimer();
+      ResetCountdownTimer("Mqtt sleep off");
       //Start web server if needed
       startWebSever();
     }
+  }else if(key=="hasDiscovery"){
+      mqttSetupDevice(getChipID()); 
   }else{
     //Increasments, offs+=1, offs-=1.5
     if(key.endsWith("+") || key.endsWith("-")){
