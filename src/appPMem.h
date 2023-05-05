@@ -102,6 +102,25 @@ R"=====(
 .icon:hover {
   fill: cadetblue;
 }
+
+@media screen and (max-width: 600px){
+  table td {
+    display: table-cell;
+  }
+
+  .card-icon {
+    width: auto;
+  }
+  .card-key {
+    width: auto;
+    min-width: 100px;
+  }
+  .card-val {
+    width: 100%;
+  }
+
+}
+
 </style>)=====";
 
 //Scripts to handle websockets
