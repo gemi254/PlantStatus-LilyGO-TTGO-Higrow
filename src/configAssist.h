@@ -1,4 +1,4 @@
-#define CLASS_VERSION "2.0"          // Class version
+#define CLASS_VERSION "2.5"          // Class version
 #define MAX_PARAMS 50                // Maximum parameters to handle
 #define DEF_CONF_FILE "/config.ini"  // Default Ini file to save configuration
 #define INI_FILE_DELIM '~'           // Ini file pairs seperator
@@ -6,6 +6,10 @@
 #define DONT_ALLOW_SPACES false      // Allow spaces in var names ?
 #define PASSWD_KEY   "_pass"         // The key part that defines a password field
 #define HOSTNAME_KEY "host_name"     // The key that defines host name
+#define TIMEZONE_KEY "time_zone"     // The key that defines time zone for setting time
+
+#define USE_WIFISCAN true            // Set to false to disable wifi scan
+#define USE_TIMESYNC true            // Set to false to disable sync esp with browser if out of sync
 
 // Define Platform libs
 #if defined(ESP32)
@@ -73,7 +77,7 @@ struct confSeperators {
 // ConfigAssist class
 class ConfigAssist{ 
   public:
-    ConfigAssist() {_jsonLoaded = false; _iniValid=false; _confFile = DEF_CONF_FILE; }
+    ConfigAssist() {_jsonLoaded = false; _iniValid=false; _confFile = DEF_CONF_FILE;  }
     ConfigAssist(String ini_file) {  
       _jStr = NULL;  _jsonLoaded = false; _iniValid = false; _dirty = false; 
       if (ini_file != "") _confFile = ini_file;
@@ -93,6 +97,7 @@ class ConfigAssist{
         _dirty = true;
       }      
     }
+
     // Editable Ini file, with json dict
     void init(String ini_file, const char * jStr) { 
       if(jStr) _jStr = jStr;
@@ -107,7 +112,8 @@ class ConfigAssist{
         _dirty = true;
       }      
     }
-    //Init with dict only, default ini
+
+    // Dictionary only, default ini file
     void initJsonDict(const char * jStr) { 
       init(_confFile,  jStr);
     }
@@ -115,21 +121,26 @@ class ConfigAssist{
     // Is config loaded valid ?
     bool valid(){ return _iniValid;}
     bool exists(String variable){ return getKeyPos(variable) >= 0; }
-
+    
     // Start an AP with a web server and render config values loaded from json dictionary
-    // for quick connection to wifi
-    void setup(WEB_SERVER &server, std::function<void(void)> handler) {
-      String hostName = getHostName();
-      LOG_INF("ConfigAssist starting AP\n");
-      WiFi.mode(WIFI_AP);
-      WiFi.softAP(hostName.c_str(),"",1);
-      LOG_INF("Wifi AP SSID: %s started, use 'http://%s' to connect\n", WiFi.softAPSSID().c_str(), WiFi.softAPIP().toString().c_str());      
-      if (MDNS.begin(hostName.c_str()))  LOG_INF("AP MDNS responder Started\n");      
-      server.begin();
-      server.on("/",handler);
-      server.on("/cfg",handler);
-      LOG_INF("AP HTTP server started");
-    } 
+    void setup(WEB_SERVER &server, bool apEnable = false){
+      String hostName = getHostName();      
+      LOG_INF("ConfigAssist setup webserver\n");
+      _server = &server;
+      if(apEnable){
+        WiFi.mode(WIFI_AP_STA);
+        WiFi.softAP(hostName.c_str(),"",1);
+        LOG_INF("Wifi AP SSID: %s started, use 'http://%s' to connect\n", WiFi.softAPSSID().c_str(), WiFi.softAPIP().toString().c_str());      
+        if (MDNS.begin(hostName.c_str()))  LOG_INF("AP MDNS responder Started\n");  
+        server.begin();
+      }
+      if(USE_WIFISCAN)  startScanWifi();      
+      server.on("/cfg",[this] { this->handleFormRequest(this->_server);  } );
+      server.on("/scan", [this] { this->handleWifiScanRequest(); } );
+      server.onNotFound([this] { this->handleNotFound(); } );
+      LOG_DBG("ConfigAssist setup done. %x\n", this);      
+    }
+
     // Get a temponary hostname
     static String getMacID(){
       String mac = WiFi.macAddress();
@@ -261,8 +272,7 @@ class ConfigAssist{
       }
     }
     
-    // Load json description file. 
-    // On update=true update only additional pair info    
+    // Load json description file. On update=true update only additional pair info    
     int loadJsonDict(String jStr, bool update=false) { 
       if(jStr==NULL) return -1; 
       DeserializationError error;
@@ -320,6 +330,10 @@ class ConfigAssist{
           }else if (obj.containsKey("default")){ //Edit box
             String d = obj["default"];
             c.value = d;
+            if(obj.containsKey("attribs")){
+              String a = obj["attribs"];
+              c.attribs = a;
+            } 
             c.type = TEXT_BOX;
           }else{
             LOG_ERR("Undefined value on param : %i.", i);
@@ -412,10 +426,6 @@ class ConfigAssist{
         if(row.name==HOSTNAME_KEY){
           row.value.replace("{mac}", getMacID());
         }
-        /***
-        if(row.type==CHECK_BOX){ //Save 0,1 on booleans
-          row.value = (row.value == "on") ? "1" : "0";
-        }*/
         char configLine[512];
         sprintf(configLine, "%s%c%s\n", row.name.c_str(), INI_FILE_DELIM, row.value.c_str());   
         szOut+=file.write((uint8_t*)configLine, strlen(configLine));
@@ -426,17 +436,58 @@ class ConfigAssist{
       _dirty = false;
       return true;
     }
+    // Get system local time
+    String getLocalTime() {      
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      time_t currEpoch = tv.tv_sec;
+      char timeFormat[20];
+      strftime(timeFormat, sizeof(timeFormat), "%d/%m/%Y %H:%M:%S", localtime(&currEpoch));
+      return String(timeFormat);
+    }
+    
+    // Compare browser with system time and correct if needed
+    void checkTime(uint32_t timeUtc, int timeOffs){
+      struct timeval tvLocal;
+      gettimeofday(&tvLocal, NULL);
+      
+      long diff = (long)timeUtc - tvLocal.tv_sec;
+      LOG_DBG("Remote utc: %lu, local: %lu\n", timeUtc, tvLocal.tv_sec);
+      LOG_DBG("Time diff: %ld\n",diff);      
+      if( abs(diff) > 5L ){ //5 Secs
+        LOG_DBG("LocalTime: %s\n", getLocalTime().c_str());          
+        struct timeval tvRemote;
+        tvRemote.tv_usec = 0;
+        tvRemote.tv_sec = timeUtc;
+        settimeofday(&tvRemote, NULL);
+        String tmz;
+        if(getKeyPos(TIMEZONE_KEY) >= 0) tmz = get(TIMEZONE_KEY);
+        if(tmz==""){
+          String tmz = "GMT";
+          if(timeOffs >= 0) tmz += "+" + String(timeOffs);
+          else tmz += String(timeOffs);
+        } 
+        setenv("TZ", tmz.c_str(), 1);
+        tzset();
+        LOG_INF("LocalTime after sync: %s, tmz=%s\n", getLocalTime().c_str(), tmz.c_str());
+        
+      }      
+    }
+
+    // Respond a HTTP request for /scan results
+    void handleWifiScanRequest(){
+      checkScanRes();  _server->sendContent(_jWifi); 
+    }
+
+    // Respond a not found HTTP request
+    void handleNotFound(){
+      _server->send ( 200, "text/html", "<meta http-equiv=\"refresh\" content=\"0;url=/cfg\">");
+    }
 
     // Respond a HTTP request for the form use the CONF_FILE
     // to save. Save, Reboot ESP, Reset to defaults, cancel edits
     void handleFormRequest(WEB_SERVER * server){
-      /*
-      for(uint8_t i=0; i<server->args(); ++i ){        
-          String key(server->argName(i));
-          String val(server->arg(i));
-          LOG_DBG("handleFormRequest key: %s, val: %s\n", key.c_str(), val.c_str());
-      }*/
-
+      if(server == NULL ) server = _server;
       //Save config form
       if (server->args() > 0) {
         server->setContentLength(CONTENT_LENGTH_UNKNOWN);        
@@ -459,7 +510,18 @@ class ConfigAssist{
         if (server->hasArg(F("_CANCEL"))) {
           server->send ( 200, "text/html", "<meta http-equiv=\"refresh\" content=\"0;url=/\">");
           return;
-        }    
+        }
+ 
+        //Reboot esp?    
+        if (server->hasArg(F("_RBT_CONFIRM"))) {
+          LOG_DBG("Restarting..\n");
+          server->send(200, "text/html", "OK");
+          server->client().flush(); 
+          delay(1000);
+          ESP.restart();
+          return;
+        }
+        
         //Update configs from form post vals
         String reply = "";
         for(uint8_t i=0; i<server->args(); ++i ){
@@ -469,7 +531,16 @@ class ConfigAssist{
           val = urlDecode(val);
           if(key=="apName" || key =="_SAVE" || key=="_RST" || key=="_RBT" || key=="plain") continue;
           if(key.endsWith(FILENAME_IDENTIFIER)) continue;
-
+          if(key=="clockUTC"){
+              // Synchronize to browser clock if out of sync
+              String offs("0");
+              if(server->hasArg("offs")){
+                offs = String(server->arg("offs"));
+              }
+              checkTime(val.toInt(), offs.toInt());
+              server->send(200, "text/html", "OK");
+              return;
+          }
           //Check if if text box with file name
           String fileNameKey = server->argName(i) + FILENAME_IDENTIFIER;
           if(server->hasArg(fileNameKey)){
@@ -480,7 +551,7 @@ class ConfigAssist{
           LOG_DBG("Form upd: %s = %s\n", key.c_str(), val.c_str());
           if(!put(key, val)) reply = "ERROR: " + key;
         }
-
+       
         //Reboot esp
         if (server->hasArg(F("_RBT"))) {
             saveConfigFile();
@@ -491,12 +562,10 @@ class ConfigAssist{
             out.replace("{msg}", "Configuration saved.<br>Device will restart in a few seconds");      
             server->send(200, "text/html", out);
             server->client().flush(); 
-            delay(1000);
-            ESP.restart();
+            return;
         }        
         //Save config file 
         if (server->hasArg(F("_SAVE"))) {
-            //String out(CONFIGASSIST_HTML_MESSAGE);            
             if(saveConfigFile()) reply = "Config saved.";
             else reply = "ERROR: Failed to save config.";
             delay(100);
@@ -523,7 +592,12 @@ class ConfigAssist{
       server->sendContent(out);
       server->sendContent(CONFIGASSIST_HTML_CSS);
       server->sendContent(CONFIGASSIST_HTML_CSS_CTRLS);      
-      server->sendContent(CONFIGASSIST_HTML_SCRIPT);
+      String script(CONFIGASSIST_HTML_SCRIPT);
+      String subScript = "";
+      if(USE_TIMESYNC) subScript = CONFIGASSIST_HTML_SCRIPT_TIME_SYNC;  
+      if(USE_WIFISCAN) subScript += CONFIGASSIST_HTML_SCRIPT_WIFI_SCAN;
+      script.replace("/*{SUB_SCRIPT}*/", subScript);
+      server->sendContent(script);
       out = String(CONFIGASSIST_HTML_BODY);
       out.replace("{host_name}", getHostName());
       server->sendContent(out);
@@ -536,7 +610,9 @@ class ConfigAssist{
       out = String(CONFIGASSIST_HTML_END);
       out.replace("{appVer}", CLASS_VERSION);
       server->sendContent(out);
+      //LOG_DBG("Generate form end\n");
     }
+    
     //Get edit page html table (no form)
     String getEditHtml(){
       sortReadOrder();      
@@ -550,9 +626,28 @@ class ConfigAssist{
     }
 
   private:
-    // Decode given string from url
+    // Is string numeric
+    bool isNumeric(String s){ //1.0, -.232, .233, -32.32
+      unsigned int l = s.length();
+      if(l==0) return false;
+      bool dec=false, sign=false;
+      for(unsigned int i = 0; i < l; ++i) {
+        if (s.charAt(i) == '.'){
+          if(dec) return false;
+          else dec = true;
+        }else if(s.charAt(i) == '+' || s.charAt(i) == '-' ){
+          if(sign) return false;
+          else sign = true;
+        }else if (!isDigit(s.charAt(i))){
+          //LOG_INF("%c\n", s.charAt(i));
+          return false;
+        }
+      }
+      return true;
+    }
+    
+    // Decode given string, replace encoded characters
     String urlDecode(String inVal) {
-      // replace url encoded characters
       std::string decodeVal(inVal.c_str()); 
       std::string replaceVal = decodeVal;
       std::smatch match; 
@@ -563,6 +658,7 @@ class ConfigAssist{
       }
       return String(replaceVal.c_str());      
     }
+
     // Load a file into a string
     bool loadText(String fPath, String &txt){
       File file = STORAGE.open(fPath, "r");
@@ -593,7 +689,7 @@ class ConfigAssist{
       file.close();
       return true;
     }
-
+    
     // Render keys,values to html lines
     bool getEditHtmlChunk(String &out){      
       confPairs c;
@@ -606,7 +702,11 @@ class ConfigAssist{
       if(c.type == TEXT_BOX){
         elm = String(CONFIGASSIST_HTML_TEXT_BOX);
         if(c.name.indexOf(PASSWD_KEY)>=0)
-          elm.replace("<input ", "<input type=\"password\" ");
+          elm.replace("<input ", "<input type=\"password\" " +c.attribs);
+        else if(isNumeric(c.value))
+          elm.replace("<input ", "<input type=\"number\" " +c.attribs);
+        else 
+          elm.replace("<input ", "<input " +c.attribs);
       }else if(c.type == TEXT_AREA){
         String file = String(CONFIGASSIST_HTML_TEXT_AREA_FNAME);        
         file.replace("{key}", c.name + FILENAME_IDENTIFIER);
@@ -773,7 +873,47 @@ class ConfigAssist{
       if (_configs.size() > MAX_PARAMS) 
         LOG_WRN("Config file entries: %u exceed max: %u\n", _configs.size(), MAX_PARAMS);
     }
-     
+    
+    // Build json on Wifi scan complete     
+    static void scanComplete(int networksFound) {
+      LOG_INF("%d network(s) found\n", networksFound);      
+      if( networksFound <= 0 ) return;
+      
+      _jWifi = "[";
+      for (int i = 0; i < networksFound; ++i){
+          if(i) _jWifi += ",\n";
+          _jWifi += "{";
+          _jWifi += "\"rssi\":"+String(WiFi.RSSI(i));
+          _jWifi += ",\"ssid\":\""+WiFi.SSID(i)+"\"";
+          _jWifi += "}";
+          LOG_DBG("%i,%s\n", WiFi.RSSI(i), WiFi.SSID(i).c_str());
+        }
+      _jWifi += "]";
+      LOG_DBG("Scan complete \n");    
+    }
+
+    // Send wifi scan results to client
+    static void checkScanRes(){
+      int n = WiFi.scanComplete();
+      if(n>0){
+        scanComplete(n);
+        WiFi.scanDelete();
+        startScanWifi();
+      }        
+    }
+
+    // Start async wifi scan
+    static void startScanWifi(){
+      int n = WiFi.scanComplete();
+      if(n==-1){
+        LOG_DBG("Scan in progress..\n");
+      }else if(n==-2){
+        LOG_DBG("Starting async scan..\n");          
+        WiFi.scanNetworks(/*async*/true,/*show_hidden*/true);
+      }else{
+        LOG_DBG("Scan complete status: %i\n", n);
+      }
+    }  
   private: 
     enum input_types { TEXT_BOX=1, TEXT_AREA=2, CHECK_BOX=3, OPTION_BOX=4, RANGE_BOX=5, COMBO_BOX=6};
     std::vector<confPairs> _configs;
@@ -783,4 +923,9 @@ class ConfigAssist{
     bool _dirty;
     const char * _jStr;
     String _confFile;
+    static WEB_SERVER *_server;
+    static String _jWifi;
 };
+
+WEB_SERVER *ConfigAssist::_server = NULL;
+String ConfigAssist::_jWifi="[{}]";
