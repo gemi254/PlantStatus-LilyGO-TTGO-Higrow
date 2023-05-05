@@ -71,8 +71,8 @@ bool connectToNetwork(){
     st_pass = conf["st_pass" + String(i)];
 
     //Wifi down, reconnect here
-    //LOG_INF("Wifi ST connecting to: %s, %s \n",st_ssid.c_str(), st_pass.c_str());
-    LOG_INF("Wifi ST connecting to: %s\n",st_ssid.c_str());
+    LOG_INF("Wifi ST connecting to: %s, %s \n",st_ssid.c_str(), st_pass.c_str());
+    //LOG_INF("Wifi ST connecting to: %s\n",st_ssid.c_str());
     WiFi.begin(st_ssid.c_str(), st_pass.c_str());      
     int col = 0;
     uint32_t startAttemptTime = millis();      
@@ -153,6 +153,8 @@ static void handleRoot(){
   pServer->sendContent(CONFIGASSIST_HTML_CSS);
   pServer->sendContent(HTML_PAGE_HOME_CSS);
   pServer->sendContent(HTML_PAGE_HOME_SCRIPT);
+  //Send time sync script on AP
+  if(USE_TIMESYNC && apStarted) pServer->sendContent("<script>" + String(CONFIGASSIST_HTML_SCRIPT_TIME_SYNC) + "</script>");
   out = HTML_PAGE_HOME_BODY;
   out.replace("{host_name}",conf["host_name"]);
   out.replace("{plant_name}",conf["plant_name"]);
@@ -183,7 +185,7 @@ static void handleRoot(){
   pServer->sendContent(end);
   //pServer->sendContent(HTML_PING_SCRIPT);
   pServer->client().flush(); 
-  ResetCountdownTimer();
+  ResetCountdownTimer("Handle root");
 }
 
 //Show a text file in browser window
@@ -294,21 +296,20 @@ static void handleCmd(){
   } 
   pServer->send(200, "text/html", "");
   pServer->client().flush(); 
-  ResetCountdownTimer();
+  ResetCountdownTimer("Handle cmd");
 }
 
 // Handler function for ping from the web page to avoid sleep
 static void handlePing(){
   pServer->send(200, "text/html", "");
-  ResetCountdownTimer();
+  ResetCountdownTimer("Handle ping");
 }
 
-// Handler function for AP config form
-static void handleAssistRoot() { 
-  ResetCountdownTimer();
-  conf.handleFormRequest(pServer); 
-  pServer->sendContent(String(HTML_PING_SCRIPT));
+// Handler function for ping from the web page to avoid sleep
+static void handleFavIcon(){
+  pServer->send(200, "text/html", "");  
 }
+
 // Handler function to list file sytem.
 static void handleFileSytem(){
   String dir(DATA_DIR);
@@ -388,20 +389,20 @@ static void handleFileSytem(){
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
     switch(type) {
         case WStype_DISCONNECTED:
-            LOG_INF("[%u] Disconnected!\n", num);
+            LOG_INF("Websocket [%u] Disconnected!\n", num);
             break;
         case WStype_CONNECTED:
             {
               IPAddress ip = pWebSocket->remoteIP(num);
-              LOG_INF("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+              LOG_INF("Websocket [%u] connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
 
               // send message to client
               pWebSocket->sendTXT(num, "Connected");
             }
             break;
         case WStype_TEXT:
-            LOG_INF("[%u] get Text: %s\n", num, payload);
-            ResetCountdownTimer();
+            LOG_DBG("[%u] get Text: %s\n", num, payload);
+            ResetCountdownTimer("Websocket text");
             // send message to client
             // webSocket.sendTXT(num, "message here");
 
@@ -409,7 +410,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
             // webSocket.broadcastTXT("message here");
             break;
         case WStype_BIN:
-            LOG_INF("[%u] get binary length: %u\n", num, length);
+            LOG_DBG("[%u] get binary length: %u\n", num, length);
             // send message to client
             // webSocket.sendBIN(num, payload, length);
             break;
@@ -429,7 +430,7 @@ void wsSendSensors(){
   pWebSocket->broadcastTXT(jsonBuff);
 }
 
-// Is a web server client connected (AP or SP)?
+// Is a web server client connected (AP or ST)?
 bool isClientConnected(WEB_SERVER *pServer){
 
   apClients = WiFi.softAPgetStationNum();
@@ -446,6 +447,32 @@ bool isClientConnected(WEB_SERVER *pServer){
   }
   return false;
 }
+
+// Register web server handlers
+void registerHandlers(){
+  if(!pServer) return;
+  pServer->on("/", handleRoot);
+  pServer->on("/cmd", handleCmd);
+  ///Register /cfg /scan handlers 
+  if(!apStarted){
+    conf.setup(*pServer, false);
+  }
+  
+  pServer->on("/pg", handlePing);
+  pServer->on("/fs", handleFileSytem);
+  pServer->on("/favicon.ico", handleFavIcon);
+  LOG_INF("Registered web handlers\n");
+}
+
+// Start the websocket server
+void startWebSockets(){
+  if(pWebSocket) return;
+  pWebSocket = new WebSocketsServer(81);
+  pWebSocket->begin();
+  pWebSocket->onEvent(webSocketEvent);
+  LOG_INF("Started web sockets at port: 81\n");  
+}
+
 // Start the web server
 void startWebSever(){
   if(pServer) return;
@@ -453,14 +480,9 @@ void startWebSever(){
     LOG_INF("MDNS responder Started\n");
   pServer = new WebServer(80);
   pServer->begin();
-  pServer->on("/", handleRoot);
-  pServer->on("/cmd", handleCmd);
-  pServer->on("/cfg", handleAssistRoot);
-  pServer->on("/pg", handlePing);
-  pServer->on("/fs", handleFileSytem);
   LOG_INF("Started web server at port: 80\n");
-  pWebSocket = new WebSocketsServer(81);
-  pWebSocket->begin();
-  pWebSocket->onEvent(webSocketEvent);
-  LOG_INF("Started web sockets at port: 81\n");  
+  //Register server handlers
+  registerHandlers();
+  //Start websockets
+  startWebSockets();
 }
