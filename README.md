@@ -4,9 +4,9 @@ Application supports both **DHT** sensors (DHT11,DHT12,DHT22) or the new **BME28
 and the internal **soil moisture** and **soil salt** sensor.
 
 ## Main features
-+ Allow measurements using mobile Access point connections only. Synchronize time with browser
++ Take measurements without iternet, using mobile Access point connections only. (Synchronize device time with browser)
 + Configure parameters using an **access point** and **config portal** on startup. Uses 
-<a target="_blank" title="ConfigAssist class" href="https://github.com/gemi254/ConfigAssist-ESP32-ESP8266">ConfigAssist</a> library to edit application variables
+<a target="_blank" title="ConfigAssist class" href="https://github.com/gemi254/ConfigAssist-ESP32-ESP8266">ConfigAssist</a> library to edit application variables.
 + Publish sensor values in a **mqtt broker**.
 + **Homeassistant** integration using MQTT **auto discovery** interface.
 + **Daily** measurements **Log** in a csv file stored in SPIFFS. **View** file in browser.
@@ -35,12 +35,11 @@ esptool.py --port COM5 write_flash -fs 1MB -fm dout 0x0 PlantStatus.bin
 ## Usage
 On first run **PlantStatus** will create an **access point** named **T-HIGROW_{mac}** (**{mac}** will be replaced by device id) and waits 30 seconds for a client connection. If connection is not established for 30 seconds, device will enter to sleep again. Press user button again to wake up device and activate AP.
 
-Using a mobile phone connect to the **T-HIGROW_{mac}** access point and navigate your browser to **192.168.4.1** to open the device's **Home page**. Pressing the custom button once will take
-measurements and display, while disconnecting from AP will put the device back to sleep.
+Using a mobile phone connect to the **T-HIGROW_{mac}** access point and navigate your browser to **192.168.4.1** to open the device's **Home page**. Pressing the custom button once will take measurements and display, while disconnecting from AP will put the device back to sleep.
 
-Navigate to **Config** '/cfg' to setup the device. All application parameters can be edited there like (Wifi credencials, MQTT, offsets and others) and they will be saved to an ini file on spiffs.
+Navigate to **Config** '/cfg' to setup the device and connect it to the internet. All application parameters can be edited there like (Wifi credencials, MQTT, offsets and others) and they will be saved to an ini file on spiffs.
 
-Once setup complete, reboot the device by pressing `Reboot` button. On next loop device will wake up, take a measurement, publish it to mqtt and enter deep sleep again. During sleep, pressing the **user button** once, will make the device wake up, publish measurements and enter deep sleep again. 
+Once setup complete, reboot the device by pressing `Reboot` button. On next loop device will wake up, take a measurement, publish it to mqtt and enter deep sleep again. During sleep, pressing the **user button** once, will make the device wake up, publish measurements and enter back to deep sleep again. 
 
 Pressing the **user button** for long time (> 5 sec) will make device to wake up, publish measurements, and start a web server 
 waiting connection for 30 seconds from a remote host. Connect and navigate you browser to device ip to see the live measurements.
