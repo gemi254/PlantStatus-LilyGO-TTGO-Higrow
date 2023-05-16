@@ -150,11 +150,11 @@ static void handleRoot(){
   
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   pServer->sendContent(out);
-  pServer->sendContent(CONFIGASSIST_HTML_CSS);
+  pServer->sendContent(conf.getCSS());
   pServer->sendContent(HTML_PAGE_HOME_CSS);
   pServer->sendContent(HTML_PAGE_HOME_SCRIPT);
   //Send time sync script on AP
-  if(USE_TIMESYNC && apStarted) pServer->sendContent("<script>" + String(CONFIGASSIST_HTML_SCRIPT_TIME_SYNC) + "</script>");
+  if(USE_TIMESYNC && apStarted) pServer->sendContent("<script>" + conf.getTimeSyncScript() + "</script>");
   out = HTML_PAGE_HOME_BODY;
   out.replace("{host_name}",conf["host_name"]);
   out.replace("{plant_name}",conf["plant_name"]);
@@ -231,7 +231,7 @@ static void handleCmd(){
   //WebServer::args() ignores empty parameters 
   for (int i = 0; i < pServer->args(); i++) {
     LOG_DBG("Cmds received: [%i] %s, %s \n",i, pServer->argName(i), pServer->arg(i).c_str()  );
-    String out(CONFIGASSIST_HTML_MESSAGE);
+    String out(conf.getMessageHtml());
     out.replace("{url}", "/");
     out.replace("{refresh}", "3000");
     String cmd(pServer->argName(i));    
@@ -273,14 +273,14 @@ static void handleCmd(){
       reset();
    }else if(cmd=="resetLog"){
       out.replace("{title}", "Reseting log");
-      if (logFile){
-        dbgLog.close();
+      if (ca_logFile){
+        ca_logFile.close();
         STORAGE.remove(LOG_FILENAME);
-        dbgLog = STORAGE.open(LOG_FILENAME, FILE_APPEND);
-        if( !dbgLog ) {
+        ca_logFile = STORAGE.open(LOG_FILENAME, FILE_APPEND);
+        if( !ca_logFile ) {
           out.replace("{msg}", "Failed to reset log file..");
           Serial.printf("Failed to open log %s\n", LOG_FILENAME);
-          logFile = false;
+          ca_logToFile = false;
         }else{
           out.replace("{msg}", "Reseted log file");
         }
@@ -327,7 +327,7 @@ static void handleFileSytem(){
   out.replace("{page_title}", "Directory: " + dir);
   pServer->sendContent(out);
   out ="";
-  pServer->sendContent(CONFIGASSIST_HTML_CSS);
+  pServer->sendContent(conf.getCSS());
   pServer->sendContent(HTML_PAGE_SIMPLE_BODY);
   out += "<style> a { text-decoration: none; }</style>\n";
   out += "Directory: <b>" + dir + "</b></br></br>\n";
