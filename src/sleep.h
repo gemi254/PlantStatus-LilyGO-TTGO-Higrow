@@ -33,7 +33,7 @@ void goToDeepSleep(const char *reason, bool error=true)
 
   LOG_WRN("Sleep, ms: %lu, reason: %s, Boots: %u, BootsErr: %u, millis: %lu\n", sleepTime, reason, lastBoot["boot_cnt"].toInt(), lastBoot["boot_cnt_err"].toInt(), (millis() - appStart));
   Serial.flush();
-  if(dbgLog) dbgLog.close();
+  if(ca_logFile) ca_logFile.close();
   STORAGE.end();
   delay(100);
   //Go to sleep! Zzzz
