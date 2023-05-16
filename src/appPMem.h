@@ -271,7 +271,7 @@ PROGMEM const char HTML_PAGE_HOME_SEP[] = R"=====(
         <table>     
 )=====";
 PROGMEM const char HTML_PAGE_HOME_BUTTON_VIEWLOG[] = R"=====(
-  <button title='View debug log' onClick="window.open('/cmd?view={log}', '_blank');">Debug log</button>
+  <button title='View debug log' onClick="window.open('/cmd?view={log}', '_blank');">View log</button>
 )=====";
 PROGMEM const char HTML_PAGE_HOME_BUTTON_RESETLOG[] = R"=====(
   <button title='Reset debug log file. All data will be lost.' onClick="window.location.href ='/cmd?resetLog={log}';">Remove log</button>
