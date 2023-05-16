@@ -23,9 +23,13 @@
 #include <WebServer.h>
 #include "SPIFFS.h"
 #include <ESPmDNS.h>
+#include <configAssist.h>        //Config assist class
 #include "user-variables.h"
 
-#define APP_VER "1.1.1"   // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
+#define DEF_LOG_LEVEL '2' //Errors & Warnings
+
+#define APP_VER "1.1.2"   // Updated configAssist v 2.6.2
+//#define APP_VER "1.1.1" // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
 //#define APP_VER "1.1.0" // Save config using javascript async requests. Battery debug calibration
 //#define APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
 //#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
@@ -114,14 +118,6 @@ static String chipID;              //Wifi chipid
 static String topicsPrefix;        //Subscribe to topics
 static uint8_t apClients = 0;      //Connected ap clients
 
-// Log to file
-#define CONFIG_ASSIST_LOG_PRINT_CUSTOM
-#define LOG_LEVEL '2' //Errors & Warnings
-//#define LOG_LEVEL '3' //Errors & Warnings & info
-#define LOG_FILENAME "/log"
-bool logFile = false;
-File dbgLog;                         
-
 // User button
 bool btPress = false;
 bool btState = false;
@@ -129,6 +125,11 @@ bool btState = false;
 // Time functions
 String timeZone;
 String ntpServer;
+
+//Access configAssist module parameters
+extern bool ca_logToFile;
+extern byte ca_logLevel;
+extern File ca_logFile; 
 
 // Mqtt constants
 WiFiClient wifiClient;
@@ -149,7 +150,6 @@ WebSocketsServer *pWebSocket = NULL;
 #endif
 
 // App config 
-#include "configAssist.h"        //Setup assistant class
 ConfigAssist conf;               //Config class
 ConfigAssist lastBoot;           //Save last boot vars
 
@@ -208,15 +208,11 @@ void setup()
   //Time is ok on wake up but needs to be configured with tz
   setenv("TZ", conf["time_zone"].c_str(), 1);
   
-  //Enable logging with timestamp
-  logFile  = conf["logFile"].toInt();
-  if(logFile){    
-    dbgLog = STORAGE.open(LOG_FILENAME, FILE_APPEND);
-    if( !dbgLog ) {
-      LOG_ERR("Failed to open log %s\n", LOG_FILENAME);
-      logFile = false;
-    }
-  } 
+  //Enable configAssist logPrint to file
+  ca_logToFile = conf["logFile"].toInt();
+  
+  //Set configAssist log level
+  ca_logLevel = DEF_LOG_LEVEL;
   
   LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);
  
