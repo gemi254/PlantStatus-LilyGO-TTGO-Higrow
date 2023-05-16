@@ -26,7 +26,7 @@
 #include <configAssist.h>        //Config assist class
 #include "user-variables.h"
 
-#define DEF_LOG_LEVEL '2' //Errors & Warnings
+#define DEF_LOG_LEVEL '4' //Errors & Warnings
 
 #define APP_VER "1.1.2"   // Updated configAssist v 2.6.2
 //#define APP_VER "1.1.1" // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
@@ -192,6 +192,7 @@ void setup()
     pServer = new WebServer(80);
     //Start ap and register configAssist handlers
     conf.setup(*pServer, true);
+    apStarted = true;
     
     //Register app webserver handlers
     registerHandlers();
@@ -200,7 +201,6 @@ void setup()
     startWebSockets();
     
     ResetCountdownTimer("AP start");
-    apStarted = true;
     initSensors();    
     return;
   }
