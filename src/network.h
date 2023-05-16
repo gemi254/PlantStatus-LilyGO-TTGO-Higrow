@@ -128,7 +128,17 @@ String getLineHtml(JsonPair kv){
     line.replace("{val}", String(kv.value().as<const char*>()));
   return line;
 }
-
+// Handler function for AP config form
+static void handleAssistRoot() { 
+  ResetCountdownTimer("configEdit");
+  conf.handleFormRequest(pServer); 
+  pServer->sendContent(String(HTML_PING_SCRIPT));
+}
+// Handler function for AP config form
+static void handleAssistScan() { 
+  conf.handleWifiScanRequest();   
+}
+  
 // Handler function for root of the web page 
 static void handleRoot(){
   //Read on each refresh
@@ -453,11 +463,13 @@ void registerHandlers(){
   if(!pServer) return;
   pServer->on("/", handleRoot);
   pServer->on("/cmd", handleCmd);
-  ///Register /cfg /scan handlers 
+
+  //Handlers are registered by configAssist
   if(!apStarted){
+    pServer->on("/cfg", handleAssistRoot );
+    pServer->on("/scan", handleAssistScan );
     conf.setup(*pServer, false);
-  }
-  
+  }  
   pServer->on("/pg", handlePing);
   pServer->on("/fs", handleFileSytem);
   pServer->on("/favicon.ico", handleFavIcon);
