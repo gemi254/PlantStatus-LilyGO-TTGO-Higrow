@@ -213,7 +213,9 @@ static void handleViewFile(String fileName, bool download=false){
     // download file as attachment, required file name in inFileName
     LOG_INF("Download file: %s, size: %0.1f K", fileName.c_str(), (float)(f.size()/(1024)));
     pServer->sendHeader("Content-Type", "text/text");
-    pServer->sendHeader("Content-Disposition", "attachment; filename=" + fileName);
+    int n = fileName.lastIndexOf( '/' );
+    String downloadName = conf["host_name"] + "_" + fileName.substring( n + 1 );
+    pServer->sendHeader("Content-Disposition", "attachment; filename=" + downloadName);
     pServer->sendHeader("Content-Length", String(f.size()));
     pServer->sendHeader("Connection", "close");
     size_t sz = pServer->streamFile(f, "application/octet-stream");
