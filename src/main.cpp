@@ -28,7 +28,8 @@
 
 #define DEF_LOG_LEVEL '2' //Errors & Warnings
 
-#define APP_VER "1.1.2"   // Updated configAssist v 2.6.2
+#define APP_VER "1.1.3"   // Added hostname to  download file name
+//#define APP_VER "1.1.2" // Updated configAssist v 2.6.2
 //#define APP_VER "1.1.1" // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
 //#define APP_VER "1.1.0" // Save config using javascript async requests. Battery debug calibration
 //#define APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
