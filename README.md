@@ -88,6 +88,8 @@ If log file is pressent ``Debug log`` and ``Reset log`` buttons will be availabl
 Pressing the user button for > 10 seconds when the device is not in sleep will make a **Factory reset**. All config files will be
 removed from SPIFFS and default values will be loaded. TTGO-T-HIGrow will start an access point on next reboot to reconfigure.
 
+On wifi  **connection failure** pressing the User button for >5 secs will force starting the **Access Point** for reconfigure station connections.
+
 Remote **configuration commands** can be send as **retained** messages from the **mosquitto broker**. Messages will be delivered on next reboot,
 alter the configuration and save it to SPIFFS to be loaded on next reboot.
 
