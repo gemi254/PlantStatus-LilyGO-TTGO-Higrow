@@ -4,6 +4,7 @@ Application supports both **DHT** sensors (DHT11,DHT12,DHT22) or the new **BME28
 and the internal **soil moisture** and **soil salt** sensor.
 
 ## Main features
++ Display a 24 hour graph of the latest measurements.
 + Take measurements without iternet, using mobile Access point connections only. (Synchronize device time with browser)
 + Configure parameters using an **access point** and **config portal** on startup. Uses 
 <a target="_blank" title="ConfigAssist class" href="https://github.com/gemi254/ConfigAssist-ESP32-ESP8266">ConfigAssist</a> library to edit application variables.
