@@ -282,6 +282,7 @@ PROGMEM const char HTML_PAGE_HOME_END[] = R"=====(
       </div>
       <div class="card">
         <button title='View sensors hourly log' onClick="window.open('/cmd?view=', '_blank');">Hourly</button>
+        <button title='Draw chart with log data' onClick='window.location.href="/chrt"'>Chart</button>
         <button title='View sensors daily logs' onClick='window.location.href="/fs?dir=/data"'>Daily</button>
         <button title='Configure this device' onClick='window.location.href="/cfg"'>Configure</button>
         <button title='Reboot device' onClick='if(!confirm("Reboot esp?")) return false; else window.location.href="/cmd?reboot=1;"'>Reboot</button>
