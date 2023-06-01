@@ -91,6 +91,7 @@ bool connectToNetwork(){
   
   if (WiFi.status() != WL_CONNECTED){
     LOG_ERR("Wifi connect fail\n");
+    WiFi.disconnect();
     return false;
   }else{
     LOG_INF("Wifi AP SSID: %s connected, use 'http://%s' to connect\n", st_ssid.c_str(), WiFi.localIP().toString().c_str()); 
@@ -345,7 +346,7 @@ static void handleFileSytem(){
   out += "Directory: <b>" + dir + "</b></br></br>\n";
   pServer->sendContent(out);
   out = "<table>";
-  uint8_t row = 0;
+  size_t row = 0;
   while (row++ < dirArr.size()) { 
     String d = dirArr[row - 1];    
     if(row==1){
@@ -387,6 +388,7 @@ static void handleFileSytem(){
     out += "</br>" + String(HTML_BACK_BUTTON);  
   pServer->sendContent(out);
   out = "</br></br>";
+  
   size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
   out += "<small>Total space: " + String(STORAGE.totalBytes() / 1024) + " K, ";  
   out += "Used: " + String(STORAGE.usedBytes() / 1024) + " K, ";  
@@ -395,6 +397,16 @@ static void handleFileSytem(){
   pServer->sendContent(out);
   pServer->sendContent(HTML_PAGE_SIMPLE_BODY_END);
   pServer->client().flush(); 
+}
+
+static void handleCharts(){
+  String out = HTML_PAGE_HOME_START;
+  out.replace("{page_title}", "Charts");
+  pServer->sendContent(out);
+  pServer->sendContent(HTML_CHARTS_CSS);
+  pServer->sendContent("<script>" + String(HTML_CHARTS_SCRIPT) + "</script>");
+  pServer->sendContent("<script>" + String(HTML_CHARTS_MAIN_SCRIPT) + "</script>");  
+  pServer->sendContent(HTML_CHARTS_BODY);
 }
 
 // Websockets handler
@@ -474,6 +486,7 @@ void registerHandlers(){
   }  
   pServer->on("/pg", handlePing);
   pServer->on("/fs", handleFileSytem);
+  pServer->on("/chrt", handleCharts);
   pServer->on("/favicon.ico", handleFavIcon);
   LOG_INF("Registered web handlers\n");
 }
@@ -499,4 +512,20 @@ void startWebSever(){
   registerHandlers();
   //Start websockets
   startWebSockets();
+}
+// Start Access point server and edit config
+void startAP(){    
+    pServer = new WebServer(80);
+    //Start AP and register configAssist handlers
+    conf.setup(*pServer, true);
+    apStarted = true;
+    
+    //Register app webserver handlers
+    registerHandlers();
+    
+    //Start websockets
+    startWebSockets();
+    
+    ResetCountdownTimer("AP start");
+    initSensors();   
 }
