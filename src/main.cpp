@@ -28,7 +28,8 @@
 
 #define DEF_LOG_LEVEL '2' //Errors & Warnings
 
-#define APP_VER "1.1.3"   // Added hostname to  download file name
+#define APP_VER "1.1.4"   // Display 24h graph of the lastest log file. Press user button for 5 secs to force starting AP
+//#define APP_VER "1.1.3" // Added hostname to download file name
 //#define APP_VER "1.1.2" // Updated configAssist v 2.6.2
 //#define APP_VER "1.1.1" // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
 //#define APP_VER "1.1.0" // Save config using javascript async requests. Battery debug calibration
@@ -160,6 +161,7 @@ ConfigAssist lastBoot;           //Save last boot vars
 #include <battery.h>
 #include <sensors.h>
 #include <appPmem.h>
+#include <chartsPMem.h>
 #include <network.h>
 #include <mqtt.h>
 
@@ -184,44 +186,28 @@ void setup()
   if (!SPIFFS.begin(true)){
     Serial.print("Error mounting SPIFFS\n");
   }
+    //Set configAssist log level
+  ca_logLevel = DEF_LOG_LEVEL;
+  //Enable configAssist logPrint to file
+  ca_logToFile = conf["logFile"].toInt();
   
+  //Measure bat with no wifi enabled
+  adcVolt = analogRead(BAT_ADC); 
+  LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);
+
   //Initialize config class
   conf.initJsonDict(appConfigDict_json);
   //Failed to load config or ssid empty
-  if(!conf.valid() || conf["st_ssid1"]=="" ){ 
-    //Start Access point server and edit config
-    pServer = new WebServer(80);
-    //Start ap and register configAssist handlers
-    conf.setup(*pServer, true);
-    apStarted = true;
-    
-    //Register app webserver handlers
-    registerHandlers();
-    
-    //Start websockets
-    startWebSockets();
-    
-    ResetCountdownTimer("AP start");
-    initSensors();    
+  if(!conf.valid() || conf["st_ssid1"]==""){ 
+    startAP();
     return;
   }
   
   //Time is ok on wake up but needs to be configured with tz
   setenv("TZ", conf["time_zone"].c_str(), 1);
-  
-  //Enable configAssist logPrint to file
-  ca_logToFile = conf["logFile"].toInt();
-  
-  //Set configAssist log level
-  ca_logLevel = DEF_LOG_LEVEL;
-  
-  LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);
  
   if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
     LOG_DBG("Wake up from sleep\n");
-
-  //Measure bat with no wifi enabled
-  adcVolt = analogRead(BAT_ADC); 
   
   //User button check at startup  
   btState = !digitalRead(USER_BUTTON);
@@ -244,8 +230,12 @@ void setup()
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
 
   //Start ST WiFi
-  wifiConnected = connectToNetwork();    
-  
+  wifiConnected = connectToNetwork();
+  //Fall back to AP if connection error and button pressed    
+  if(!wifiConnected && !digitalRead(USER_BUTTON) ){    
+    startAP();
+    return;
+  } 
   //Synchronize time if needed or every n loops
   if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % 3 ){
     if(wifiConnected) syncTime();
