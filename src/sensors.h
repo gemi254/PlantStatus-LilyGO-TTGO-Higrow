@@ -120,15 +120,16 @@ void readSensors(){
   if(dhtFound){
     float t12 = pDht->readTemperature(); // Read temperature as Fahrenheit then dht.readTemperature(true)
     data.temp = t12;
-    float h12 = pDht->readHumidity();
+    float h12 = pDht->readHumidity(true);
     data.humid = h12;
-    LOG_DBG("Read DHT, temp: %4.1f, hum: %4.1f\n", t12, h12);    
+    float hic = pDht->computeHeatIndex(t12, h12, false);
+    LOG_DBG("Read DHT, temp: %4.1f, hum: %4.1f, Heat ndx: %4.1f\n", t12, h12,hic);    
   }else if (bmeFound) {
     float bme_temp = pBmp->readTemperature();
     if( isnan(bme_temp) || bme_temp < -40.0F || bme_temp > 85.0F ) bme_temp = NAN;
     data.temp = bme_temp;
     float bme_humid = pBmp->readHumidity();
-    if( isnan(bme_humid) || bme_humid < -40.0F || bme_humid > 85.0F ) bme_humid = NAN;
+    if( isnan(bme_humid) || bme_humid < 0 || bme_humid > 100.0F ) bme_humid = NAN;
     data.humid = bme_humid;
     float bme_pressure = (pBmp->readPressure() / 100.0F);
     if( isnan(bme_pressure) || bme_pressure < 300.0F || bme_pressure > 1100.0F ) bme_pressure = NAN;
