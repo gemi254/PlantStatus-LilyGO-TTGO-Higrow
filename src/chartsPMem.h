@@ -24,7 +24,7 @@ PROGMEM const char HTML_CHARTS_SCRIPT[] = R"~(
 function isNumeric(n) {     return !isNaN(parseFloat(n)) && isFinite(n); }
 function roundToPIPScale(number){     return Math.round(number * 1000000) / 1000000 }
 
-function drawLine(ctx, sourceX, sourceY, destnationX, destnationY, strokeStyle="rgba(0, 0, 0, 0.7)",dash=[]){
+function drawLine(ctx, sourceX, sourceY, destnationX, destnationY, strokeStyle="rgba(0, 0, 0, 0.7)", dash=[]){
     ctx.beginPath();
     ctx.moveTo(sourceX, sourceY);
     ctx.lineTo(destnationX, destnationY);
@@ -70,7 +70,7 @@ function loadData(csv, max=300) {
             if(e=="DateTime"){
                 data[e].push(line[i]);
                 var t = new Date(line[i]).getTime()                
-                data['timestamp'].push(t/1000)                
+                data['timestamp'].push(t)                
                 if(t < info[e].min) info[e].min = t;
                 if(t > info[e].max) info[e].max = t;
                 //if(line[i].length > info[e].chLen ) info[e].chLen  = (line[i]).length;
@@ -145,8 +145,6 @@ function drawChart(ctxName, chObj, key){
     drawLine(ctx, canvas.width, 0, canvas.width, canvas.height, rectColor);
     drawLine(ctx, 0, canvas.height, canvas.width, canvas.height, rectColor);
     
-    //if(chObj.info[key].chLen < 3 ) chObj.info[key].chLen = 4;
-    
     var cw = canvas.width - (chW * chObj.info[key].chLen) - 2;
     var ch = canvas.height - 2*chH;
     
@@ -175,7 +173,6 @@ function drawChart(ctxName, chObj, key){
     for(var i = 0; i <= labelCountY; i++){             
         var currentScale = (1 / labelCountY) * i;             
         label = roundToPIPScale(chObj.info[key].min + (dY * currentScale)).toFixed(1);
-        console.log( i, currentScale, label ); 
         const y = ((stepSizeY * i) * -1 ) + ch + chH
         ctx.fillText( label, cw + 3, y ) ; 
         drawLine(ctx, 0, y, cw + 0, y, 'rgba(110, 110, 110, 0.3)');
@@ -184,7 +181,7 @@ function drawChart(ctxName, chObj, key){
     const labelCountX = 24
     const stepSizeX = cw / labelCountX;
     for(var i = 0; i <= labelCountX; i++){
-        var label = 24 - i + ":00"        
+        label = 24 - i + ":00"        
         var ld = 5 * label.length;
         const x = ((stepSizeX * i) * -1 ) + cw 
         var xl = x - ld / 2
@@ -214,6 +211,9 @@ PROGMEM const char HTML_CHARTS_MAIN_SCRIPT[] = R"~(
                     console.log('Error:', txt)
                 }else{
                     var js = loadData( txt ,450);
+                    js.info['DateTime'].min = (new Date(js.data['DateTime'][0]).setHours(0, 0, 0, 0) ) ;
+                    js.info['DateTime'].max = (new Date(js.data['DateTime'][0]).setHours(24, 0, 0, 0) ) ;
+
                     $('#charts_info').innerHTML = js.name
                     $('#charts').innerHTML = "";
                     contexts = [];
