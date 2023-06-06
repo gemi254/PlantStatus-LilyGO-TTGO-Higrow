@@ -24,11 +24,12 @@ PROGMEM const char HTML_CHARTS_SCRIPT[] = R"~(
 function isNumeric(n) {     return !isNaN(parseFloat(n)) && isFinite(n); }
 function roundToPIPScale(number){     return Math.round(number * 1000000) / 1000000 }
 
-function drawLine(ctx, sourceX, sourceY, destnationX, destnationY, strokeStyle="rgba(0, 0, 0, 0.7)"){
+function drawLine(ctx, sourceX, sourceY, destnationX, destnationY, strokeStyle="rgba(0, 0, 0, 0.7)",dash=[]){
     ctx.beginPath();
     ctx.moveTo(sourceX, sourceY);
     ctx.lineTo(destnationX, destnationY);
     ctx.strokeStyle = strokeStyle
+    ctx.setLineDash(dash);
     ctx.stroke();   
 }
  
@@ -61,6 +62,8 @@ function loadData(csv, max=300) {
                 info[e] = new Object();
                 info[e].min = Number.POSITIVE_INFINITY;
                 info[e].max = Number.NEGATIVE_INFINITY;
+                info[e].minT = 0;
+                info[e].maxT = 0;
                 info[e].avg = 0;
                 info[e].chLen = Number.NEGATIVE_INFINITY;
             } 
@@ -70,7 +73,7 @@ function loadData(csv, max=300) {
                 data['timestamp'].push(t/1000)                
                 if(t < info[e].min) info[e].min = t;
                 if(t > info[e].max) info[e].max = t;
-                if(line[i].length > info[e].chLen ) info[e].chLen  = (line[i]).length;
+                //if(line[i].length > info[e].chLen ) info[e].chLen  = (line[i]).length;
             }else if(isNumeric(line[i])){
                 var v = parseFloat(line[i])
                 data[e].push(v);
@@ -89,10 +92,10 @@ function loadData(csv, max=300) {
     }
     headers.forEach((e) => {
         if(info[e].avg) info[e].avg = (info[e].avg / n).toFixed(1); 
+        if(info[e].min == Number.POSITIVE_INFINITY) info[e].min = 0 
+        if(info[e].max == Number.NEGATIVE_INFINITY) info[e].max = 0
     });
-    info['DateTime'].min = (new Date(data['DateTime'][0]).setHours(0, 0, 0, 0) )  / 1000;
-    info['DateTime'].max = (new Date(data['DateTime'][0]).setHours(24, 0, 0, 0) ) / 1000;
-
+    info['DateTime'].chLen = 5;
     return { "name": name, "data": data, "info": info }
 }
 
@@ -134,7 +137,7 @@ function drawChart(ctxName, chObj, key){
     var canvas = document.getElementById(ctxName);
     if(!canvas) return;
     var ctx = canvas.getContext('2d');
-    const rectColor = 'rgba(110, 110, 110, 0.5)';    
+    const rectColor = 'rgba(100, 100, 100, 1)';    
     ctx.clearRect(0, 0, canvas.width, canvas.height);  
 
     drawLine(ctx, 0 ,0, 0, canvas.height, rectColor);
@@ -142,21 +145,20 @@ function drawChart(ctxName, chObj, key){
     drawLine(ctx, canvas.width, 0, canvas.width, canvas.height, rectColor);
     drawLine(ctx, 0, canvas.height, canvas.width, canvas.height, rectColor);
     
-    if(chObj.info[key].chLen < 3 ) chObj.info[key].chLen = 4;
+    //if(chObj.info[key].chLen < 3 ) chObj.info[key].chLen = 4;
     
-    var cw = canvas.width - (chW * chObj.info[key].chLen)- 2;
-    var ch = canvas.height - 1 * chH;
+    var cw = canvas.width - (chW * chObj.info[key].chLen) - 2;
+    var ch = canvas.height - 2*chH;
     
-    const dY = ((chObj.info[key].max - chObj.info[key].min) / 100) * 90;
-    const multY = ((ch / dY) / 100) * 90;  
+    const dY = (chObj.info[key].max  - chObj.info[key].min);
+    const multY = (ch / dY);
 
     const dX = chObj.info['DateTime'].max - chObj.info['DateTime'].min;
-    const multX = ((cw / dX) / 100) * 100;  
-
+    const multX = (cw / dX);
     var lastY = 0;
     var lastX = 0;
     for(var i = 0; i < chObj.data[key].length;i++){
-        const curY = ((chObj.data[key][i] * multY) * -1) + (chObj.info[key].min * multY) + ch ;        
+        const curY = ((chObj.data[key][i] * multY) * -1) + (chObj.info[key].min * multY) + ch + chH;        
         const curX = (chObj.data['timestamp'][i] - chObj.info['DateTime'].min) * multX;
         if(i == 0){ lastY = curY; lastX = curX; }
         drawLine(ctx, lastX, lastY, curX, curY)
@@ -167,17 +169,18 @@ function drawChart(ctxName, chObj, key){
         lastY = curY; lastX = curX;
     } 
     
-    const labelCountY =  ch / chH
+    const labelCountY =  Math.ceil((ch / chH) + 0)
     const stepSizeY =  ch / labelCountY;
-    console.log(labelCountY, stepSizeY )
+    var label = ""
     for(var i = 0; i <= labelCountY; i++){             
         var currentScale = (1 / labelCountY) * i;             
-        var label = roundToPIPScale(chObj.info[key].min + (dY * currentScale)).toFixed(1);
-        const y = ((stepSizeY * i) * -1 ) + ch 
+        label = roundToPIPScale(chObj.info[key].min + (dY * currentScale)).toFixed(1);
+        console.log( i, currentScale, label ); 
+        const y = ((stepSizeY * i) * -1 ) + ch + chH
         ctx.fillText( label, cw + 3, y ) ; 
         drawLine(ctx, 0, y, cw + 0, y, 'rgba(110, 110, 110, 0.3)');
     }  
-    
+
     const labelCountX = 24
     const stepSizeX = cw / labelCountX;
     for(var i = 0; i <= labelCountX; i++){
@@ -186,8 +189,8 @@ function drawChart(ctxName, chObj, key){
         const x = ((stepSizeX * i) * -1 ) + cw 
         var xl = x - ld / 2
         if(xl < 0) xl = 2;
-        ctx.fillText( label, xl, ch + 12 ) ; 
-        drawLine(ctx, x, 0, x, ch, 'rgba(200, 200, 200, 0.3)');
+        ctx.fillText( label, xl, ch + chH + 14 ) ; 
+        drawLine(ctx, x, 0, x, ch + chH, 'rgba(200, 200, 200, 0.3)');
     } 
 }
 )~";
