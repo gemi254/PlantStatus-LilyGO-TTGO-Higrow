@@ -4,7 +4,7 @@ Application supports both **DHT** sensors (DHT11,DHT12,DHT22) or the new **BME28
 and the internal **soil moisture** and **soil salt** sensor.
 
 ## Main features
-+ Display a 24 hour **graph** of the latest measurements stored in SPIFFS.
++ Display 24 hour **graphs** of the measurements stored in SPIFFS.
 + Take measurements without iternet, using mobile Access point connections only. (Synchronize device time with browser)
 + Configure parameters using an **access point** and **config portal** on startup. Uses 
 <a target="_blank" title="ConfigAssist class" href="https://github.com/gemi254/ConfigAssist-ESP32-ESP8266">ConfigAssist</a> library to edit application variables.
@@ -68,6 +68,11 @@ To make device visible in **Home Assistant** press the`Discovery` button from ho
 If spiffs is running out of space Log files are **rotated** and the oldest dir will be deleted.
 Old **monthly** history can be viewed with `Logs` button. Navigate in SPIFFS directories and chose a date log file. 
 Use icons to view or download the file.
+<p align="center">
+  <img src="images/charts.png" style="width: 90%;">
+  <br>
+  Daily charts view.
+</p> 
 
 <p align="center">
   <img src="images/PlantStatus_log_dirs.png">
