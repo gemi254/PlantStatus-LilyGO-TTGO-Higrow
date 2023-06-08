@@ -5,7 +5,7 @@ html, body { width:100%; height:100%; }
 canvas { width: 95vw;  height: 250px;  } 
 .label { text-align: center; margin-top: 5px; margin-bottom: 25px; }
 .context { text-align: center; margin-top: 5px; margin-bottom: 15px; }
-#charts_info { text-align: center; margin-top: 5px; margin-bottom: 15px; }
+#charts_info { text-align: center; margin-top: 10px; margin-bottom: 10px; }
 #charts { display: grid; justify-content: center; align-items: center; border: 1px solid white; }
 </style>
 )~";
@@ -13,9 +13,22 @@ PROGMEM const char HTML_CHARTS_BODY[] = R"~(
 </head>
 <body>
 <div class="container">
-    <div id="charts_info"></div>
+    <div id="chart_sel" style="text-align: center;">        
+        <button type="button" onclick="changeMonth(+1)"><<</button>
+        <select id="months_list" name="months"></select>
+        <button type="button" onclick="changeMonth(-1)">>></button>
+        &nbsp;        
+        <button type="button" onclick="changeGraph(+1)"><<</button>
+        <select id="charts_list" name="charts"></select>
+        <button type="button" onclick="changeGraph(-1)">>></button>
+    </div>
     <div id="charts"></div>
+    <div id="charts_info"></div>
 </div>
+<div style="text-align: center;">
+<button type="button" onClick="window.location.href='/'; return false;">Back</button>
+</div>
+<br>
 </body>
 </html>
 )~";
@@ -24,7 +37,7 @@ PROGMEM const char HTML_CHARTS_SCRIPT[] = R"~(
 function isNumeric(n) {     return !isNaN(parseFloat(n)) && isFinite(n); }
 function roundToPIPScale(number){     return Math.round(number * 1000000) / 1000000 }
 
-function drawLine(ctx, sourceX, sourceY, destnationX, destnationY, strokeStyle="rgba(0, 0, 0, 0.7)", dash=[]){
+function drawLine(ctx, sourceX, sourceY, destnationX, destnationY, strokeStyle="rgba(0, 0, 0, 0.5)", dash=[]){
     ctx.beginPath();
     ctx.moveTo(sourceX, sourceY);
     ctx.lineTo(destnationX, destnationY);
@@ -113,14 +126,14 @@ function createCtxs(id, chartData){
             var span = document.createElement('span');
             const ctxName = id + '.' + key + '_cv';
             ctxNames.push([ctxName, key]);
-            span.innerHTML += '<div class="wrapper">'
-            span.innerHTML += '<div class="context"><canvas id="'+ ctxName +'" width="1024px" height="250px"></canvas></div>'
             if( headersDict[key] ) var inf = "<b>" + headersDict[key] + "</b>" 
             else var inf = "<b>" + key + "</b>"
+            span.innerHTML += '<div class="wrapper">'
             inf += "&nbsp;&nbsp;<span style='font-size: smaller;'>"
             inf += "Min: <b>"+ chartData.info[key].min + "</b> at " + chartData.data['DateTime'][ chartData.info[key].minT ].split(" ")[1] + ",&nbsp;&nbsp;"
             inf += "Max: <b>"+ chartData.info[key].max + "</b> at " + chartData.data['DateTime'][ chartData.info[key].maxT ].split(" ")[1]
             inf += "&nbsp;&nbsp; Avg: <b>" + chartData.info[key].avg + "</b>" 
+            span.innerHTML += '<div class="context"><canvas id="'+ ctxName +'" width="1024px" height="250px"></canvas></div>'
             //inf += " len: "+ chartData.info[key].chLen
             inf += '</span>'
             span.innerHTML += '<div class="label">'+ inf  +'</div>'                
@@ -162,7 +175,7 @@ function drawChart(ctxName, chObj, key){
         drawLine(ctx, lastX, lastY, curX, curY)
         ctx.beginPath();
         ctx.arc(curX, curY, 2, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'rgba(110, 110, 110, 0.5)';
+        ctx.strokeStyle = 'rgba(110, 110, 110, 0.3)';
         ctx.stroke();
         lastY = curY; lastX = curX;
     } 
@@ -194,38 +207,129 @@ function drawChart(ctxName, chObj, key){
 
 // Chart page scripts
 PROGMEM const char HTML_CHARTS_MAIN_SCRIPT[] = R"~(
-    document.addEventListener('DOMContentLoaded', function (event) {
-        const $ = document.querySelector.bind(document);
-        const $$ = document.querySelectorAll.bind(document);            
-        const refreshInterval = 30000
-        var drawTimer=0;
-        let contexts = []
-        
-        async function plotCurLog() {      
-            const baseHost = document.location.origin;
-            const url = baseHost + "/cmd?view="
-            try {
-                const response = await fetch(encodeURI(url));
-                var txt = await response.text();
-                if (!response.ok){        
-                    console.log('Error:', txt)
-                }else{
-                    var js = loadData( txt ,450);
-                    js.info['DateTime'].min = (new Date(js.data['DateTime'][0]).setHours(0, 0, 0, 0) ) ;
-                    js.info['DateTime'].max = (new Date(js.data['DateTime'][0]).setHours(24, 0, 0, 0) ) ;
+const $ = document.querySelector.bind(document);
+const $$ = document.querySelectorAll.bind(document);            
+const refreshInterval = 30000
+//var drawTimer=0;
+let contexts = []
 
-                    $('#charts_info').innerHTML = js.name
-                    $('#charts').innerHTML = "";
-                    contexts = [];
-                    contexts.push(createCtxs(js.name, js))
-                }
-            } catch(e) {
-                console.log(e,url)
-            }
-            clearTimeout(drawTimer);
-            drawTimer = setTimeout(plotCurLog, refreshInterval); 
+async function changeGraph(i){            
+    const list = $('#charts_list')
+    if(this.id=='charts_list'){
+        file = this.value
+    }else{
+        var n = list.selectedIndex + i;
+        if(n < 0){
+            const r = await changeMonth(-1);
+            if(!r) return
+            console.log(list)
+            n = list.options.length - 1;
         }
+        if(n >= list.options.length){
+            const r = await changeMonth(+1);
+            if(!r) return
+            n = 0
+        } 
+        file = list.options[n].value
+        list.selectedIndex = n;
+    }
+    const r = await drawLog("/data/" + $('#months_list').value + "/" + file);
+}
 
-        plotCurLog()
-    });  
+async function changeMonth(i){            
+    const list = $('#months_list')
+    if(this.id=='months_list'){
+        file = this.value
+    }else{
+        var n = list.selectedIndex + i;
+        if(n < 0 || n >= list.options.length ) return false;
+        file = list.options[n].value
+        list.selectedIndex = n;
+    }
+    $('#charts_list').innerHTML="";
+    const res = await listFiles("/data/" + file)
+    changeGraph(0)
+    return true;
+}
+
+async function listFiles(dir="") {
+    var baseHost = document.location.origin;
+    var url = baseHost + "/cmd?ls="
+    if(dir!="")  url += "&dir="+dir
+    try {
+        const response = await fetch(encodeURI(url));
+        var txt = await response.text();        
+        if (false && !response.ok){        
+            console.log('Error:', txt)
+        }else{
+            var lines = txt.split(/\r\n|\n/);            
+            while (lines.length) {
+                var line = lines.shift()
+                if(line=="") continue;
+                if(dir==""){
+                    if(line.startsWith("[") )
+                        $('#months_list').add(new Option(line.replace("[","").replace("]","").replace("/data/","")));
+                }else{
+                    if(line.startsWith("[") ) continue;
+                    var opt = line.split("\t")[0]
+                    var optT = opt.split("-").slice(-1)[0].split(".")[0]
+                    if(opt.length>1){
+                        $('#charts_list').add(new Option(optT,opt) );
+                    }
+                        
+                }                        
+            }
+            console.log("List end:", dir)
+            return response;                    
+        }
+    } catch(e) {
+        console.log(e,url)
+    }
+    
+}
+async function getLog(name) {
+    var baseHost = document.location.origin;
+    const url = baseHost + "/cmd?view="+name;
+    try {
+        const response = await fetch(encodeURI(url));
+        var txt = await response.text();
+        if (!response.ok){        
+            console.log('Error:', txt)
+        }else{
+            return txt;
+        }
+    } catch(e) {
+        console.log(e,url)
+    }
+    return ""
+}  
+async function drawLog(name) {
+    var txt = await getLog(name)
+    try {
+        var js = loadData( txt ,450);
+        js.info['DateTime'].min = (new Date(js.data['DateTime'][0]).setHours(0, 0, 0, 0) ) ;
+        js.info['DateTime'].max = (new Date(js.data['DateTime'][0]).setHours(24, 0, 0, 0) ) ;
+        $('#charts_info').innerHTML = "<span style='font-size: smaller;'>";
+        $('#charts_info').innerHTML += "File: <b>" + name + "</b>"
+        $('#charts_info').innerHTML += ", Points: <b>" + js.data['DateTime'].length + "</b>"
+        $('#charts_info').innerHTML += ", Start: <b>" + js.data['DateTime'].slice(-1)[0]  + "</b>"
+        $('#charts_info').innerHTML += ", End: <b>" + js.data['DateTime'][0] + "</b>"
+        $('#charts').innerHTML = "";
+        contexts = [];
+        contexts.push(createCtxs(js.name, js))
+    } catch(e) {
+        console.log(e, name)
+    }
+}
+ 
+async function Init() {
+  //console.log('Init');
+  const r1 = await listFiles()
+  const r2 = await changeMonth(0) 
+}
+document.addEventListener('DOMContentLoaded', function (event) {
+    $('#months_list').addEventListener("change", changeMonth);
+    $('#charts_list').addEventListener("change", changeGraph);
+    Init();
+}); 
 )~";
