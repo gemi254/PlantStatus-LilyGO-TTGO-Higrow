@@ -28,21 +28,10 @@
 
 #define DEF_LOG_LEVEL '2' //Errors & Warnings
 
-#define APP_VER "1.1.4"   // Display 24h graph of the lastest log file. Press user button for 5 secs to force starting AP
+#define APP_VER "1.1.5" // Display monthly 24h graphs with the measurements of the log files.
+//#define APP_VER "1.1.4a"// Display 24h graph of the lastest log file. Press user button for 5 secs to force starting AP
 //#define APP_VER "1.1.3" // Added hostname to download file name
 //#define APP_VER "1.1.2" // Updated configAssist v 2.6.2
-//#define APP_VER "1.1.1" // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
-//#define APP_VER "1.1.0" // Save config using javascript async requests. Battery debug calibration
-//#define APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
-//#define APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
-//#define APP_VER "1.0.7" // Generate log file to debug.View log, reset log
-//#define APP_VER "1.0.6" // File system using cards, Update config assist
-//#define APP_VER "1.0.5" // User interface using css cards.
-//#define APP_VER "1.0.4" // Replace mac id, No sleep onPower and error
-//#define APP_VER "1.0.3" // View file system logs, truncate values, Added values units, Rotate log files
-//#define APP_VER "1.0.2" // Websockets to update, mqtt command to remote setup.
-//#define APP_VER "1.0.1" // Added log sensors to a daily csv file, View the log from main page.
-//#define APP_VER "1.0.0" // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
 
 #define LED_PIN 13
 #define I2C_SDA 25
