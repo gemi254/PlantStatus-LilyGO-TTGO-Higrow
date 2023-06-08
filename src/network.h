@@ -248,7 +248,29 @@ static void handleCmd(){
     out.replace("{url}", "/");
     out.replace("{refresh}", "3000");
     String cmd(pServer->argName(i));    
-    if(cmd=="view"){
+    if(cmd=="ls"){
+      String dir(DATA_DIR);
+      if(pServer->hasArg("dir")){
+        dir = pServer->arg("dir");
+        if(dir.endsWith("/") && dir.length()>1) dir.remove(dir.length() - 1);
+      }
+      std::vector<String> dirArr;               //Directory array
+      std::vector<std::vector<String>> fileArr; //Files array
+  
+      listSortedDir(dir, dirArr, fileArr );
+      size_t row = 0;
+      while (row++ < dirArr.size()) { 
+        String d = dirArr[row - 1];   
+        pServer->sendContent("[" + d + "]\n");
+      }
+      row = 0;
+      while (row++ < fileArr.size()) { 
+        String f = fileArr[row - 1][0];
+        String s = fileArr[row - 1][1];
+        pServer->sendContent(f + "\t" + s + "\n");
+      }
+      return;
+    }else if(cmd=="view"){
       String file(pServer->arg(i));
       if(file=="") file = getLogFileName(false);
       handleViewFile(file);
@@ -406,7 +428,8 @@ static void handleCharts(){
   pServer->sendContent(HTML_CHARTS_CSS);
   pServer->sendContent("<script>" + String(HTML_CHARTS_SCRIPT) + "</script>");
   pServer->sendContent("<script>" + String(HTML_CHARTS_MAIN_SCRIPT) + "</script>");  
-  pServer->sendContent(HTML_CHARTS_BODY);
+  pServer->sendContent(HTML_CHARTS_BODY);    
+  pServer->sendContent(HTML_PING_SCRIPT);
 }
 
 // Websockets handler
