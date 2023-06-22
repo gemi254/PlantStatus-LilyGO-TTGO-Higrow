@@ -133,7 +133,8 @@ String getLineHtml(JsonPair kv){
 static void handleAssistRoot() { 
   ResetCountdownTimer("configEdit");
   conf.handleFormRequest(pServer); 
-  pServer->sendContent(String(HTML_PING_SCRIPT));
+  if(pServer->args() == 0)
+    pServer->sendContent(String(HTML_PING_SCRIPT));
 }
 // Handler function for AP config form
 static void handleAssistScan() { 
