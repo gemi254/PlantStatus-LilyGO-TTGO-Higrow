@@ -28,10 +28,10 @@
 
 #define DEF_LOG_LEVEL '2' //Errors & Warnings
 
-#define APP_VER "1.1.5" // Display monthly 24h graphs with the measurements of the log files.
+#define APP_VER "1.1.6"   // Updated configAssist v2.6.3. Test wifi ST connections from AP portal.
+//#define APP_VER "1.1.5" // Display monthly 24h graphs with the measurements of the log files.
 //#define APP_VER "1.1.4a"// Display 24h graph of the lastest log file. Press user button for 5 secs to force starting AP
 //#define APP_VER "1.1.3" // Added hostname to download file name
-//#define APP_VER "1.1.2" // Updated configAssist v 2.6.2
 
 #define LED_PIN 13
 #define I2C_SDA 25
