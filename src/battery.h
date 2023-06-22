@@ -1,4 +1,5 @@
 // Calc battery state. Higrow uses TP4054 linear charger
+//R1 100K%1, R2 100K%1
 float calcBattery(uint16_t AdcVolt){
   data.batAdcVolt = AdcVolt;
   
