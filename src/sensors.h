@@ -62,7 +62,12 @@ uint32_t readSalt(){
 
 // Read and calibrate Soil
 uint8_t readSoil(){  
-  uint16_t soil = analogRead(SOIL_PIN);
+  uint32_t adc_reading = 0;    
+  for (int i = 0; i < SOIL_NO_OF_SAMPLES; i++) {
+      adc_reading += analogRead(SOIL_PIN);
+      delay(2);
+  }
+  uint16_t soil = adc_reading / SOIL_NO_OF_SAMPLES;
   uint8_t soilM = map(soil, conf["soil_min"].toInt(), conf["soil_max"].toInt(), 100, 0);
   LOG_DBG("Read soil: %lu, map: %lu\n",soil ,soilM);  
   return soilM;
