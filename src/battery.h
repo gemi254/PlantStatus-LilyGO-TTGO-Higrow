@@ -1,5 +1,14 @@
 // Calc battery state. Higrow uses TP4054 linear charger
-//R1 100K%1, R2 100K%1
+uint32_t readBatteryADC(){
+  uint32_t adc_reading = 0;    
+    for (int i = 0; i < BATT_NO_OF_SAMPLES; i++) {
+        adc_reading += analogRead(BAT_ADC);
+        delay(2);
+    }
+    adc_reading /= BATT_NO_OF_SAMPLES;
+    return adc_reading;
+}
+
 float calcBattery(uint16_t AdcVolt){
   data.batAdcVolt = AdcVolt;
   
