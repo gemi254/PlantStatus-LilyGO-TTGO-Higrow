@@ -28,10 +28,7 @@
 
 #define DEF_LOG_LEVEL '2' //Errors & Warnings
 
-#define APP_VER "1.1.6"   // Updated configAssist v2.6.3. Test wifi ST connections from AP portal.
-//#define APP_VER "1.1.5" // Display monthly 24h graphs with the measurements of the log files.
-//#define APP_VER "1.1.4a"// Display 24h graph of the lastest log file. Press user button for 5 secs to force starting AP
-//#define APP_VER "1.1.3" // Added hostname to download file name
+#define APP_VER "1.1.7"   // Improoved adc readings. Battery, soil
 
 #define LED_PIN 13
 #define I2C_SDA 25
@@ -49,6 +46,9 @@
 #define LAST_BAT_INI   "/batinf.ini"
 #define CONNECT_TIMEOUT 8000
 #define MAX_SSID_ARR_NO 2 //Maximum ssid json will describe
+
+#define BATT_NO_OF_SAMPLES     8     //Samples to read from BAT_ADC
+#define SOIL_NO_OF_SAMPLES     8     //Samples to read from SOIL_PIN
 
 //#define DEBUG_BATTERY              //Uncomment to log bat adc values
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
@@ -181,9 +181,9 @@ void setup()
   ca_logToFile = conf["logFile"].toInt();
   
   //Measure bat with no wifi enabled
-  adcVolt = analogRead(BAT_ADC); 
+  adcVolt =  readBatteryADC();
   LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);
-
+  
   //Initialize config class
   conf.initJsonDict(appConfigDict_json);
   //Failed to load config or ssid empty
@@ -269,7 +269,7 @@ void loop(){
     
     //Append to log
     logSensors();
-    
+
     if(!apStarted && !wifiConnected) goToDeepSleep("notConnected");
 
     //Send measurement to web sockets to update page
@@ -285,8 +285,8 @@ void loop(){
     data.sleepReason = "noSleep";
     
     //Read battery status
-    adcVolt = analogRead(BAT_ADC); 
-    
+    adcVolt =  readBatteryADC();
+
     //Reset loop millis
     sensorReadMs = millis();
   }
