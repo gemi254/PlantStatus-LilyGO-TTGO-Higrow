@@ -1,13 +1,18 @@
- APP_VER "1.1.2" // Updated configAssist v 2.6.2
- APP_VER "1.1.1" // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
- APP_VER "1.1.0" // Save config using javascript async requests. Battery debug calibration
- APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
- APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
- APP_VER "1.0.7" // Generate log file to debug.View log, reset log
- APP_VER "1.0.6" // File system using cards, Update config assist
- APP_VER "1.0.5" // User interface using css cards.
- APP_VER "1.0.4" // Replace mac id, No sleep onPower and error
- APP_VER "1.0.3" // View file system logs, truncate values, Added values units, Rotate log files
- APP_VER "1.0.2" // Websockets to update, mqtt command to remote setup.
- APP_VER "1.0.1" // Added log sensors to a daily csv file, View the log from main page.
- APP_VER "1.0.0" // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
+APP_VER "1.1.7" // Improoved adc readings. Battery, soil
+APP_VER "1.1.6" // Updated configAssist v2.6.3. Test wifi ST connections from AP portal.
+APP_VER "1.1.5" // Display monthly 24h graphs with the measurements of the log files.
+APP_VER "1.1.4a"// Display 24h graph of the lastest log file. Press user button for 5 secs to force starting AP
+APP_VER "1.1.3" // Added hostname to download file name
+APP_VER "1.1.2" // Updated configAssist v 2.6.2
+APP_VER "1.1.1" // Setup webserver on AP to allow live measurements without internet. Synchronize time on AP mode.
+APP_VER "1.1.0" // Save config using javascript async requests. Battery debug calibration
+APP_VER "1.0.9" // Auto adjust BH1750 Time register, Log sensors, even on no wifi connection
+APP_VER "1.0.8" // Battery prercent fix, Time sync ever 2 loops, charge date on a seperate file
+APP_VER "1.0.7" // Generate log file to debug.View log, reset log
+APP_VER "1.0.6" // File system using cards, Update config assist
+APP_VER "1.0.5" // User interface using css cards.
+APP_VER "1.0.4" // Replace mac id, No sleep onPower and error
+APP_VER "1.0.3" // View file system logs, truncate values, Added values units, Rotate log files
+APP_VER "1.0.2" // Websockets to update, mqtt command to remote setup.
+APP_VER "1.0.1" // Added log sensors to a daily csv file, View the log from main page.
+APP_VER "1.0.0" // Config with AP portal, sensors calibration, mqtt autodiscovery as device by button in main page
