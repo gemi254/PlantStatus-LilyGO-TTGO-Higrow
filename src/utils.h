@@ -40,7 +40,7 @@ bool getLocalNTPTime() {
 
 // Wait to sync time to ntp
 void syncTime(){
-  int tries=8;
+  int tries = 5;
   bool sync = getLocalNTPTime();
   while(!sync && tries >= 0){
     if (getEpoch() > 10000) {
