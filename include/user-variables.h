@@ -15,6 +15,10 @@ const char* appConfigDict_json PROGMEM = R"~(
     "label": "Password for WLAN",
   "default": ""
 },{
+    "name": "st_ip1",
+    "label": "Enter a Static ip setup (ip mask gateway) (192.168.4.2 255.255.255.0 192.168.1.1)",
+  "default": ""
+},{
     "name": "st_ssid2",
     "label": "Name for WLAN",
   "default": ""
@@ -22,6 +26,10 @@ const char* appConfigDict_json PROGMEM = R"~(
      "name": "st_pass2",
     "label": "Password for WLAN",
   "default": ""  
+},{
+    "name": "st_ip2",
+    "label": "Enter a Static ip setup (ip mask gateway) (192.168.4.2 255.255.255.0 192.168.1.1)",
+  "default": ""
 },{
 "seperator": "Device settings"
 },{
@@ -158,7 +166,7 @@ const char* appConfigDict_json PROGMEM = R"~(
 },{
      "name": "ntp_server",
     "label": "Time server to sync time",
-  "default": "pool.ntp.org"
+  "default": "83.212.108.245"
 },{
      "name": "sleep_time",
     "label": "Time to deep sleep after measurements (Seconds)",
