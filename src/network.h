@@ -58,6 +58,40 @@ bool isSensor(String key){
   return false;
 }
 
+// Set static ip if defined
+bool setStaticIP(String st_ip){
+  if(st_ip.length() <= 0) return false;
+
+  IPAddress ip, mask, gw;
+
+  int ndx = st_ip.indexOf(' ');
+  String s = st_ip.substring(0, ndx);
+  s.trim();
+  if(!ip.fromString(s)){
+    LOG_ERR("Error parsing static ip: %s\n",s.c_str());
+    return false;
+  }
+
+  st_ip = st_ip.substring(ndx + 1, st_ip.length() );
+  ndx = st_ip.indexOf(' ');
+  s = st_ip.substring(0, ndx);
+  s.trim();
+  if(!mask.fromString(s)){
+    LOG_ERR("Error parsing static ip mask: %s\n",s.c_str());
+    return false;
+  }
+
+  st_ip = st_ip.substring(ndx + 1, st_ip.length() );
+  s = st_ip;
+  s.trim();
+  if(!gw.fromString(s)){
+    LOG_ERR("Error parsing static ip gw: %s\n",s.c_str());
+    return false;
+  }
+  LOG_INF("Wifi ST setting static ip: %s, mask: %s  gw: %s \n", ip.toString().c_str(), mask.toString().c_str(), gw.toString().c_str());
+  WiFi.config(ip, gw, mask);
+  return true;  
+}
 // Connect to a SIID network
 bool connectToNetwork(){  
   WiFi.mode(WIFI_STA);
@@ -65,10 +99,15 @@ bool connectToNetwork(){
   WiFi.setHostname(conf["host_name"].c_str());
   String st_ssid =""; 
   String st_pass="";
+  String st_ip="";
   for (int i = 1; i < MAX_SSID_ARR_NO + 1; i++){    
     st_ssid = conf["st_ssid" + String(i)];
     if(st_ssid=="") continue;
     st_pass = conf["st_pass" + String(i)];
+    
+    //Set static ip if defined
+    st_ip = conf["st_ip" + String(i)];
+    setStaticIP(st_ip);  
 
     //Wifi down, reconnect here
     LOG_INF("Wifi ST connecting to: %s, %s \n",st_ssid.c_str(), st_pass.c_str());
