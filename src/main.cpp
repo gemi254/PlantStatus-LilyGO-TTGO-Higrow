@@ -28,7 +28,7 @@
 
 #define DEF_LOG_LEVEL '2' //Errors & Warnings
 
-#define APP_VER "1.1.7"   // Improoved adc readings. Battery, soil
+#define APP_VER "1.1.8"   // Fix log to file. Set static ip
 
 #define LED_PIN 13
 #define I2C_SDA 25
@@ -59,7 +59,8 @@
 #define SLEEP_DELAY_INTERVAL   30000  //After this time with no activity go to sleep
 #define SENSORS_READ_INTERVAL  30000  //Sensors read inverval in milliseconds on loop mode, 30 sec 
 #define RESET_CONFIGS_INTERVAL 10000L //Interval press user button to factory defaults.
-  
+#define TIME_SYNC_LOOPS  5            //Synchronize time every n loops
+
 // json sensors data 
 struct SensorData
 {
@@ -171,21 +172,24 @@ void setup()
   Serial.begin(115200);
   Serial.print("\n\n\n\n");
   Serial.flush();
+  //Measure bat with no wifi enabled
+  adcVolt =  readBatteryADC();
+
   //Initiate SPIFFS and Mount file system
   if (!SPIFFS.begin(true)){
     Serial.print("Error mounting SPIFFS\n");
   }
-    //Set configAssist log level
+  //Set configAssist log level
   ca_logLevel = DEF_LOG_LEVEL;
+
+  LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);  
+
+  //Initialize config class
+  conf.initJsonDict(appConfigDict_json);
+  
   //Enable configAssist logPrint to file
   ca_logToFile = conf["logFile"].toInt();
   
-  //Measure bat with no wifi enabled
-  adcVolt =  readBatteryADC();
-  LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);
-  
-  //Initialize config class
-  conf.initJsonDict(appConfigDict_json);
   //Failed to load config or ssid empty
   if(!conf.valid() || conf["st_ssid1"]==""){ 
     startAP();
@@ -226,7 +230,7 @@ void setup()
     return;
   } 
   //Synchronize time if needed or every n loops
-  if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % 3 ){
+  if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % TIME_SYNC_LOOPS ){
     if(wifiConnected) syncTime();
     else if(getEpoch() > 10000) timeSynchronized = true;
   }else{
