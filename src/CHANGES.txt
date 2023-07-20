@@ -1,3 +1,4 @@
+APP_VER "1.1.8" // Fix log to file. Set static ip
 APP_VER "1.1.7" // Improoved adc readings. Battery, soil
 APP_VER "1.1.6" // Updated configAssist v2.6.3. Test wifi ST connections from AP portal.
 APP_VER "1.1.5" // Display monthly 24h graphs with the measurements of the log files.
