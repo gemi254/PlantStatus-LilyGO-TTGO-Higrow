@@ -239,7 +239,8 @@ String getJsonBuff(){
   return String(buffer);
 }
 void mqttConnect(){
-  String broker = conf["mqtt_broker"];  
+  String broker = conf["mqtt_broker"];
+  if(broker.length()<1) return;
   int port =  conf["mqtt_port"].toInt();
   //Connect to mqtt broker
   mqttClient.setServer(broker.c_str(), port);
@@ -257,7 +258,8 @@ void publishSensors(const SensorData &data) {
 
   if(mqttClient.state() != MQTT_CONNECTED)
     mqttConnect();
-
+  
+  if(!mqttClient.connected())  return;
   //Publish status
   topicsPrefix = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipID;
   const String topicStr =  topicsPrefix + "/status";
