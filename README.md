@@ -14,7 +14,7 @@ and the internal **soil moisture** and **soil salt** sensor.
 + **Monthly** measurements **Logs** in csv files stored in SPIFFS. **View** or **download** the files from browser.
 + User button **single** Press -> Take measurement an go to sleep.
 + User button **long** Press -> Start webserver and show a **web page with measurements** to connected client.
-+ User button **long long** Press (>10 secs) -> Reset device to factory defaults
++ User button **long long** Press (>10 secs) -> Start the AP an connect to re-configure the device
 + **Websockets** to auto update sensor values in home page (No refresh).
 + **Sensors offsets** for device calibration.
 + **Auto sleep** after no activity.
@@ -44,7 +44,7 @@ Once setup complete, reboot the device by pressing `Reboot` button. On next loop
 
 Pressing the **user button** for long time (> 5 sec) will make device to wake up, publish measurements, and start a web server 
 waiting connection for 30 seconds from a remote host. Connect and navigate you browser to device ip to see the live measurements.
-Device will not enter sleep as soon as a client is connected and measurements are updated automatically every 30 secs.
+Device will not enter sleep as soon as a wifi client is connected and measurements on home page are updated automatically every 30 secs.
 
 To **re-configure** device press `configure` button from homepage end redirect to configuration portal. 
 
