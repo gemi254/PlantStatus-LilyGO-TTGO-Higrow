@@ -28,7 +28,7 @@
 
 #define DEF_LOG_LEVEL '2' //Errors & Warnings
 
-#define APP_VER "1.1.8"   // Fix log to file. Set static ip
+#define APP_VER "1.1.9"   //Start AP on long long press to edit config, Fix static ip white spaces, 
 
 #define LED_PIN 13
 #define I2C_SDA 25
@@ -50,9 +50,9 @@
 #define BATT_NO_OF_SAMPLES     8     //Samples to read from BAT_ADC
 #define SOIL_NO_OF_SAMPLES     8     //Samples to read from SOIL_PIN
 
-//#define DEBUG_BATTERY              //Uncomment to log bat adc values
+//#define DEBUG_BATTERY                //Uncomment to log bat adc values
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
-#define BATT_PERC_ONPOWER (100.0F)
+#define BATT_PERC_ONPOWER (110.0F)
 
 #define uS_TO_S_FACTOR 1000000ULL     //Conversion factor for micro seconds to seconds
 #define SLEEP_CHECK_INTERVAL   1000   //Check if it is time to sleep (millis)
@@ -243,12 +243,11 @@ void setup()
 
   //Log sensors and go to sleep
   if(!wifiConnected) return;
-
+  
   //Connect to mqtt broker
   mqttConnect();
-  
-  //Listen config commands
-  subscribeConfig();
+  if(mqttClient.connected())  //Listen config commands
+    subscribeConfig();
 
   //Start web server on long button press or on power connected?
   btState = !digitalRead(USER_BUTTON);
@@ -326,11 +325,14 @@ void loop(){
     sensorReadMs = millis() + SENSORS_READ_INTERVAL;
     btPress = false;
     LOG_DBG("Button press for: %lu\n", millis() - btPressMs);
-    //Factory reset 
+    //Start ap
     if(millis() - btPressMs > RESET_CONFIGS_INTERVAL){
-      reset();
-      delay(1009);
-      ESP.restart();
+      startAP();
+      startWebSever(); 
+      ResetCountdownTimer("Long Button down");
+      //reset();
+      //delay(1009);
+      //ESP.restart();
     }
     startWebSever();
   }
