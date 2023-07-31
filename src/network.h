@@ -63,7 +63,8 @@ bool setStaticIP(String st_ip){
   if(st_ip.length() <= 0) return false;
 
   IPAddress ip, mask, gw;
-
+  st_ip.replace("   "," ");
+  st_ip.replace("  "," ");
   int ndx = st_ip.indexOf(' ');
   String s = st_ip.substring(0, ndx);
   s.trim();
