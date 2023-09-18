@@ -28,7 +28,7 @@
 
 #define DEF_LOG_LEVEL '2' //Errors & Warnings
 
-#define APP_VER "1.1.9"   //Start AP on long long press to edit config, Fix static ip white spaces, 
+#define APP_VER "1.2.0"   // Delete log files & fix home link
 
 #define LED_PIN 13
 #define I2C_SDA 25
@@ -57,7 +57,7 @@
 #define uS_TO_S_FACTOR 1000000ULL     //Conversion factor for micro seconds to seconds
 #define SLEEP_CHECK_INTERVAL   1000   //Check if it is time to sleep (millis)
 #define SLEEP_DELAY_INTERVAL   30000  //After this time with no activity go to sleep
-#define SENSORS_READ_INTERVAL  30000  //Sensors read inverval in milliseconds on loop mode, 30 sec 
+#define SENSORS_READ_INTERVAL  10000  //Sensors read inverval in milliseconds on loop mode, 30 sec 
 #define RESET_CONFIGS_INTERVAL 10000L //Interval press user button to factory defaults.
 #define TIME_SYNC_LOOPS  5            //Synchronize time every n loops
 
