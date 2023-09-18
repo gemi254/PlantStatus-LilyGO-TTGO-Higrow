@@ -125,12 +125,12 @@ R"=====(
 
 //Scripts to handle websockets
 PROGMEM const char HTML_PAGE_HOME_SCRIPT[] = R"=====(
-<script>
-/*********** WebSockets functions ***********/
+<script type="text/javascript">
+/* ********** WebSockets functions ********** */
 const wsServer = "ws://" + document.location.host + ":81/";
 let ws = null;
 let hbTimer = null;
-let refreshInterval = 10000;
+let refreshInterval = 5000;
 document.addEventListener('DOMContentLoaded', initWebSocket());
 
 // close web socket on leaving page
@@ -213,7 +213,7 @@ function onClose(event) {
   // event.codes:
   //   1006 if server not available, or another web page is already open
   //   1005 if closed from app
-  if (event.code == 1006) {} //alert("Closed websocket as a newer connection was made, refresh browser page");
+  if (event.code == 1006) { console.log("Closed websocket as a newer connection was made"); }
   else if (event.code != 1005) initWebSocket(); // retry if any other reason
 }
 </script>  )=====";
@@ -301,7 +301,7 @@ PROGMEM const char HTML_PAGE_HOME_END[] = R"=====(
 
 //Back link
 PROGMEM const char HTML_BACK_BUTTON[] = R"~(
-<button type='button' onClick="window.history.go(-1); return false;">Back</button>
+<button type='button' onClick='window.location.href="/fs?dir=/data"' return false;">Back</button>
 )~";
 //Home button
 PROGMEM const char HTML_HOME_BUTTON[] = R"~(
