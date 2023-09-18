@@ -16,7 +16,7 @@ bool initSensors(){
         LOG_INF("Wire begin OK\n");
         pBmp = new Adafruit_BME280();
         if (!pBmp->begin()){
-            LOG_ERR("BMP280 begin error\n");
+            LOG_ERR("BME280 begin error\n");
             return false;
         }else{
           bmeFound = true;
