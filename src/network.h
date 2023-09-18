@@ -286,9 +286,24 @@ static void handleCmd(){
   for (int i = 0; i < pServer->args(); i++) {
     LOG_DBG("Cmds received: [%i] %s, %s \n",i, pServer->argName(i), pServer->arg(i).c_str()  );
     String out(conf.getMessageHtml());
-    out.replace("{url}", "/");
     out.replace("{refresh}", "3000");
     String cmd(pServer->argName(i));    
+    if(cmd=="del" || cmd=="rm"){
+      String file(pServer->arg(i));
+      if(STORAGE.remove(file.c_str())){
+        out.replace("{msg}", "Deleted file: " + file);
+      }else{
+        out.replace("{msg}", "Failed to delete file: " + file);
+      }
+      out.replace("{title}", "Delete");
+      String filePath = pServer->arg("del");
+      String dirPath = filePath.substring( 0, filePath.lastIndexOf("/") );
+      out.replace("{url}", "/fs?dir=" + dirPath);
+      pServer->send(200, "text/html", out);
+      return;
+    }
+    
+    out.replace("{url}", "/");
     if(cmd=="ls"){
       String dir(DATA_DIR);
       if(pServer->hasArg("dir")){
@@ -335,15 +350,7 @@ static void handleCmd(){
       mqttSetupDevice(getChipID()); 
       out.replace("{msg}", "Sended mqtt homeassistant device discovery");
       out.replace("{title}", "Homeassistant discovery");
-    }else if(cmd=="del" || cmd=="rm"){
-      String file(pServer->arg(i));
-      if(STORAGE.remove(file.c_str())){
-        out.replace("{msg}", "Deleted file: " + file);
-      }else{
-        out.replace("{msg}", "Failed to delete file: " + file);
-      }
-      out.replace("{title}", "Delete");
-   }else if(cmd=="reset"){
+    }else if(cmd=="reset"){
       out.replace("{msg}", "Deleting ini files..<br>Please wait");
       out.replace("{title}", "Reset ini files");
       reset();
@@ -438,9 +445,7 @@ static void handleFileSytem(){
     out += "<tr>";
     out += "<td><a target='_blank;' title='View' href='/cmd?view=" + dir + "/" + f + "'><b>" + f + "</b></a></td><td>&nbsp;&nbsp" + s + " Kb</td>\n";
     out += "<td><a title='Download' href='/cmd?download=" + dir + "/" + f + "'>" + HTML_PAGE_SVG_DOWNLOAD + "</a></td>\n";
-    #if defined(DEBUG_FILES)
-      out += "<td><a title='Delete' href='/cmd?del=" + dir + "/" + f + "'>"+ HTML_PAGE_SVG_RECYCLE +"</a></td>\n";
-    #endif
+    out += "<td><a title='Delete' href='/cmd?del=" + dir + "/" + f + "'>"+ HTML_PAGE_SVG_RECYCLE +"</a></td>\n";
     out += "</tr>";
     pServer->sendContent(out);
   }
