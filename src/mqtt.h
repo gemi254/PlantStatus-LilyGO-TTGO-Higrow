@@ -1,15 +1,4 @@
 
-//#define DEBUG_MQTT    //Uncomment to serial print DBG messages rather than publish mqtt messages
-#if defined(DEBUG_MQTT)
-  #undef LOG_DBG  
-  #define LOG_DBG(format, ...) logPrint("0", DBG_FORMAT(format,"DBG"), ##__VA_ARGS__)
-  #undef LOG_ERR  
-  #define LOG_ERR(format, ...) logPrint("0", DBG_FORMAT(format,"ERR"), ##__VA_ARGS__)
-  #undef LOG_WRN  
-  #define LOG_WRN(format, ...) logPrint("0", DBG_FORMAT(format,"WRN"), ##__VA_ARGS__)
-  #undef LOG_INF  
-  #define LOG_INF(format, ...) logPrint("0", DBG_FORMAT(format,"INF"), ##__VA_ARGS__) 
-#endif
 
 // Handle Mqtt retain commands
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -19,27 +8,27 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     msg+= ((char)payload[i]);
   }  
   clearMqttRetain = true;
-  LOG_INF("Mqtt rcv topic: %s, msg: %s\n", topic, msg.c_str());
+  LOG_I("Mqtt rcv topic: %s, msg: %s\n", topic, msg.c_str());
   
   //Messages as 'cmd=val'
   char *token = NULL;
   char seps[] = "=";
   token = strtok(&msg[0], seps);
   if(token==NULL){
-    LOG_ERR("Unknown msg: %s \n", msg.c_str());
+    LOG_E("Unknown msg: %s \n", msg.c_str());
     return;
   }
   String key(token);
   
   token = strtok( NULL, seps );
   if(token==NULL){
-    LOG_ERR("Unknown msg: %s \n", msg.c_str());
+    LOG_E("Unknown msg: %s \n", msg.c_str());
     return;
   }
   String val(token);
   key.trim();
   val.trim();
-  LOG_DBG("Exec set key: %s=%s\n", key.c_str(), val.c_str());
+  LOG_D("Exec set key: %s=%s\n", key.c_str(), val.c_str());
   if(key=="sleep"){
     if(val=="0"){
       //Don't sleep. Wait for connection
@@ -57,16 +46,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         key.remove(key.length() - 1);
         key.trim();
         if(!conf.exists(key)){
-          LOG_ERR("Key: %s not exists \n", key.c_str());
+          LOG_E("Key: %s not exists \n", key.c_str());
           return;
         }
 
         String kval = conf[key];        
         if(!isNumeric(kval)){
-          LOG_ERR("Non numeric: %s\n", kval.c_str());
+          LOG_E("Non numeric: %s\n", kval.c_str());
           return;
         }
-        //LOG_DBG("Inc key: int:%d, %d\n", isInt(kval.c_str()), isInt(val.c_str()));
+        //LOG_D("Inc key: int:%d, %d\n", isInt(kval.c_str()), isInt(val.c_str()));
         //Int
         if(isInt(kval.c_str()) && isInt(val.c_str()) ){
           int i = kval.toInt();
@@ -74,7 +63,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
           int n=0;
           if(sign=='-') n = i - inc;
           else n = i + inc;
-          LOG_DBG("Key[%s] inc int: %i %c %i = %i\n", key.c_str(), i, sign, inc, n);
+          LOG_D("Key[%s] inc int: %i %c %i = %i\n", key.c_str(), i, sign, inc, n);
           conf.put(key, String(n) );
         //Float
         }else if(isFloat(kval.c_str()) && isFloat(val.c_str()) ){  
@@ -83,16 +72,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
           float n;
           if(sign=='-') n = v - inc;
           else n = v + inc;
-          LOG_DBG("Key[%s] float: %3.2f %c %3.2f = %3.2f\n", key.c_str(), v, sign, inc, n);
+          LOG_D("Key[%s] float: %3.2f %c %3.2f = %3.2f\n", key.c_str(), v, sign, inc, n);
           conf.put(key, String(n) );
         }else{
           //String inc? //conf.put(key, conf[key].c_str() + val );
-          LOG_ERR("Key %s is not Numeric\n", key.c_str() );
+          LOG_E("Key %s is not Numeric\n", key.c_str() );
           return;
         }
     }else{
       conf.put(key, val);
-      LOG_DBG("Update key: %s=%s\n", key.c_str(), val.c_str());
+      LOG_D("Update key: %s=%s\n", key.c_str(), val.c_str());
     }
     conf.saveConfigFile();
   }  
@@ -101,7 +90,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 // Reset retained messages recv
 void clearMqttRetainMsg(){
   if(clearMqttRetain){
-    LOG_INF("Clear mqtt retaining msgs\n");
+    LOG_I("Clear mqtt retaining msgs\n");
     String topic = topicsPrefix + "/config";
     mqttClient.publish(topic.c_str(), "", true);
     mqttClient.loop();
@@ -159,9 +148,9 @@ void mqttSetup(String identyfikator, String chipId, String uom = "x", String dc 
 bool retained = true;
 
 if (mqttClient.publish(topic_c, buffer_c, retained)) {
-    LOG_DBG("Message published successfully\n");
+    LOG_D("Message published successfully\n");
 }else{
-    LOG_ERR("Error in Message, not published\n");
+    LOG_E("Error in Message, not published\n");
     goToDeepSleep("mqttPublishFail");
   }
 }
@@ -188,7 +177,7 @@ void subscribeConfig(){
   //Subscribe to config topic
   mqttClient.setCallback(mqttCallback);
   mqttClient.subscribe(topicConf.c_str());
-  LOG_INF("Subscribed at: %s\n",topicConf.c_str());
+  LOG_I("Subscribed at: %s\n",topicConf.c_str());
 }
 
 // Get a json with sensors
@@ -246,10 +235,10 @@ void mqttConnect(){
   mqttClient.setServer(broker.c_str(), port);
   bool con = mqttClient.connect(broker.c_str(), conf["mqtt_user"].c_str(), conf["mqtt_pass"].c_str());
   if (!con) {
-    LOG_ERR("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
+    LOG_E("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
     goToDeepSleep("mqttConnectFail");
   }else{
-    LOG_INF("Connecting to MQTT broker: %s:%i OK\n", broker, port);  
+    LOG_I("Connecting to MQTT broker: %s:%i OK\n", broker, port);  
   }
 }
 // Publish sensors data to mqtt
@@ -267,13 +256,13 @@ void publishSensors(const SensorData &data) {
 
   String jsonBuff = getJsonBuff();
   
-  LOG_DBG("Sending message to topic: %s\n",topic);
+  LOG_D("Sending message to topic: %s\n",topic);
   #if not defined(DEBUG_MQTT)
     bool retained = true;  
     if (mqttClient.publish(topic, jsonBuff.c_str(), retained)) {
-      LOG_DBG("Message published\n");
+      LOG_D("Message published\n");
     } else {
-      LOG_ERR("Error in Message, not published\n");
+      LOG_E("Error in Message, not published\n");
       goToDeepSleep("mqttPublishFailed");
     }    
   #endif
