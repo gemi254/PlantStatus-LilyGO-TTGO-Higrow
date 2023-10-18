@@ -23,12 +23,16 @@
 #include <WebServer.h>
 #include "SPIFFS.h"
 #include <ESPmDNS.h>
+#define LOGGER_LOG_MODE  3          // External
+#define LOGGER_LOG_LEVEL 2          // Errors & Warnings & Info & Debug & Verbose
+bool logToFile = true;
+static File logFile;
+void _log_printf(const char *format, ...);
+
 #include <configAssist.h>        //Config assist class
 #include "user-variables.h"
 
-#define DEF_LOG_LEVEL '2' //Errors & Warnings
-
-#define APP_VER "1.2.0"   // Delete log files & fix home link
+#define APP_VER "1.2.1"   // Delete log files & fix home link
 
 #define LED_PIN 13
 #define I2C_SDA 25
@@ -118,11 +122,6 @@ bool btState = false;
 String timeZone;
 String ntpServer;
 
-//Access configAssist module parameters
-extern bool ca_logToFile;
-extern byte ca_logLevel;
-extern File ca_logFile; 
-
 // Mqtt constants
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -143,7 +142,7 @@ WebSocketsServer *pWebSocket = NULL;
 
 // App config 
 ConfigAssist conf;               //Config class
-ConfigAssist lastBoot;           //Save last boot vars
+ConfigAssist lastBoot(LAST_BOOT_INI);           //Save last boot vars
 
 #include <files.h>
 #include <utils.h>
@@ -179,16 +178,13 @@ void setup()
   if (!SPIFFS.begin(true)){
     Serial.print("Error mounting SPIFFS\n");
   }
-  //Set configAssist log level
-  ca_logLevel = DEF_LOG_LEVEL;
-
-  LOG_INF("* * * * Starting v%s * * * * * \n", APP_VER);  
+  LOG_I("* * * * Starting v%s * * * * * \n", APP_VER);  
 
   //Initialize config class
-  conf.initJsonDict(appConfigDict_json);
+  conf.setJsonDict(appConfigDict_json);
   
   //Enable configAssist logPrint to file
-  ca_logToFile = conf["logFile"].toInt();
+  logToFile = conf["logFile"].toInt();
   
   //Failed to load config or ssid empty
   if(!conf.valid() || conf["st_ssid1"]==""){ 
@@ -200,22 +196,21 @@ void setup()
   setenv("TZ", conf["time_zone"].c_str(), 1);
  
   if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
-    LOG_DBG("Wake up from sleep\n");
+    LOG_D("Wake up from sleep\n");
   
   //User button check at startup  
   btState = !digitalRead(USER_BUTTON);
-  LOG_DBG("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
+  LOG_D("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
   
   //Free space?
   //listDir("/", 3);
   checkLogRotate();
  
   //Load last boot ini file
-  //lastBoot.init(lastBootDict_json, LAST_BOOT_INI); 
   //STORAGE.remove(LAST_BOOT_INI); 
-  lastBoot.init(LAST_BOOT_INI);  
+  
   if(!lastBoot.valid()){
-    LOG_ERR("Invalid lastBoot file: %s\n", LAST_BOOT_INI);
+    LOG_E("Invalid lastBoot file: %s\n", LAST_BOOT_INI);
     STORAGE.remove(LAST_BOOT_INI);
   } 
      
@@ -299,10 +294,10 @@ void loop(){
     //Sleep count down
     sleepTimerCountdown = (sleepTimerCountdown > SLEEP_CHECK_INTERVAL) ? (sleepTimerCountdown -= SLEEP_CHECK_INTERVAL) : 0L;
     
-    LOG_DBG("Sleep count down: %lu\n", sleepTimerCountdown);
+    LOG_D("Sleep count down: %lu\n", sleepTimerCountdown);
     
     if(isClientConnected(pServer)){
-      //LOG_DBG("No sleep, clients connected\n");
+      //LOG_D("No sleep, clients connected\n");
       ResetCountdownTimer("Clients connected");
     }
     //Timeout -> sleep  
@@ -316,7 +311,7 @@ void loop(){
   //Check user button
   btState = !digitalRead(USER_BUTTON);
   if(btState){
-    //LOG_DBG("bt: %i\n", btState);
+    //LOG_D("bt: %i\n", btState);
     if(!btPress) btPressMs = millis();
     btPress = true;
     ResetCountdownTimer("Button down");
@@ -324,7 +319,7 @@ void loop(){
     //Update sensors 
     sensorReadMs = millis() + SENSORS_READ_INTERVAL;
     btPress = false;
-    LOG_DBG("Button press for: %lu\n", millis() - btPressMs);
+    LOG_D("Button press for: %lu\n", millis() - btPressMs);
     //Start ap
     if(millis() - btPressMs > RESET_CONFIGS_INTERVAL){
       startAP();
@@ -339,4 +334,31 @@ void loop(){
   //Clear mqtt retained?
   clearMqttRetainMsg();
   delay(5);
+}
+
+//Logger functions
+#define MAX_LOG_FMT 128
+static char fmtBuf[MAX_LOG_FMT];
+static char outBuf[512];
+static va_list arglist;
+
+// Custom log print function 
+void _log_printf(const char *format, ...){
+  strncpy(fmtBuf, format, MAX_LOG_FMT);
+  fmtBuf[MAX_LOG_FMT - 1] = 0;
+  va_start(arglist, format);  
+  vsnprintf(outBuf, MAX_LOG_FMT, fmtBuf, arglist);
+  va_end(arglist);
+  //size_t msgLen = strlen(outBuf);
+  Serial.print(outBuf);
+  if (logToFile){
+    if(!logFile) logFile = STORAGE.open(LOGGER_LOG_FILENAME, "a+");
+    if(!logFile){
+      Serial.printf("Failed to open log file: %s\n", LOGGER_LOG_FILENAME);
+      logToFile = false;
+      return;
+    }
+    logFile.print(outBuf);
+    logFile.flush();
+  }
 }
