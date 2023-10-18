@@ -6,32 +6,32 @@ bool initSensors(){
       if(conf["dht_type"]=="DHT11") dht_type = 11;
       else if(conf["dht_type"]=="DHT21") dht_type = 21;
       else if(conf["dht_type"]=="DHT22") dht_type = 22;
-      LOG_INF("Init DHT sensor on pin: %i, type: %s\n",DHT_PIN, conf["dht_type"]);
+      LOG_I("Init DHT sensor on pin: %i, type: %s\n",DHT_PIN, conf["dht_type"]);
       pDht = new DHT(DHT_PIN, dht_type);
       pDht->begin();
       dhtFound = true;
   }else{
       bool wireOk = Wire.begin(I2C_SDA, I2C_SCL); // wire can not be initialized at beginng, the bus is busy
       if (wireOk){
-        LOG_INF("Wire begin OK\n");
+        LOG_I("Wire begin OK\n");
         pBmp = new Adafruit_BME280();
         if (!pBmp->begin()){
-            LOG_ERR("BME280 begin error\n");
+            LOG_E("BME280 begin error\n");
             return false;
         }else{
           bmeFound = true;
         }
       }else{
-        LOG_ERR("Wire begin error\n");
+        LOG_E("Wire begin error\n");
         return false;
       } 
   }
  
   //Light sensor
   if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE)){
-    LOG_INF("BH1750 begin OK\n");
+    LOG_I("BH1750 begin OK\n");
   }else{
-    LOG_ERR("BH1750 begin error \n");
+    LOG_E("BH1750 begin error \n");
     return false;
   }
   return true;
@@ -56,7 +56,7 @@ uint32_t readSalt(){
     humi += array[i];
   }
   humi /= samples - 2;
-  LOG_DBG("Read salt: %lu\n", humi);
+  LOG_D("Read salt: %lu\n", humi);
   return humi;
 }
 
@@ -69,7 +69,7 @@ uint8_t readSoil(){
   }
   uint16_t soil = adc_reading / SOIL_NO_OF_SAMPLES;
   uint8_t soilM = map(soil, conf["soil_min"].toInt(), conf["soil_max"].toInt(), 100, 0);
-  LOG_DBG("Read soil: %lu, map: %lu\n",soil ,soilM);  
+  LOG_D("Read soil: %lu, map: %lu\n",soil ,soilM);  
   return soilM;
 }
 
@@ -94,7 +94,7 @@ float readLightValue(){
     float lux = lightMeter.readLightLevel();
     #ifdef LUX_AUTOAJUST
     if (lux < 0){ //-1 : no valid return value -2 : sensor not configured
-        LOG_ERR("Failed to read BH1750!\n");
+        LOG_E("Failed to read BH1750!\n");
         return NAN;
     }else{
       byte MTreg = 69;
@@ -107,15 +107,15 @@ float readLightValue(){
 
       if(MTreg!=69){ //Default value
         if (!lightMeter.setMTreg(MTreg)){
-          LOG_ERR("Failed to set BH1750 mtreg: %i\n", MTreg);        
+          LOG_E("Failed to set BH1750 mtreg: %i\n", MTreg);        
         }else{
-          LOG_INF("Adjusted BH1750 mtreg: %i\n", MTreg);   
+          LOG_I("Adjusted BH1750 mtreg: %i\n", MTreg);   
           lux = lightMeter.readLightLevel();
           delay(150);
         }  
       }    
     # endif
-    LOG_DBG("Read lux : %4.1f\n", lux);
+    LOG_D("Read lux : %4.1f\n", lux);
     return lux;
   }
 }
@@ -128,7 +128,7 @@ void readSensors(){
     float h12 = pDht->readHumidity(true);
     data.humid = h12;
     float hic = pDht->computeHeatIndex(t12, h12, false);
-    LOG_DBG("Read DHT, temp: %4.1f, hum: %4.1f, Heat ndx: %4.1f\n", t12, h12,hic);    
+    LOG_D("Read DHT, temp: %4.1f, hum: %4.1f, Heat ndx: %4.1f\n", t12, h12,hic);    
   }else if (bmeFound) {
     float bme_temp = pBmp->readTemperature();
     if( isnan(bme_temp) || bme_temp < -40.0F || bme_temp > 85.0F ) bme_temp = NAN;
@@ -139,7 +139,7 @@ void readSensors(){
     float bme_pressure = (pBmp->readPressure() / 100.0F);
     if( isnan(bme_pressure) || bme_pressure < 300.0F || bme_pressure > 1100.0F ) bme_pressure = NAN;
     data.pressure = bme_pressure;
-    LOG_DBG("Read bme280, temp: %4.1f, hum: %4.1f, press: %4.1f\n", bme_temp, bme_humid, bme_pressure);
+    LOG_D("Read bme280, temp: %4.1f, hum: %4.1f, press: %4.1f\n", bme_temp, bme_humid, bme_pressure);
   }
 
   uint8_t  soil = readSoil();
@@ -188,14 +188,14 @@ String getLogFileName(bool createDir = true){
 //Log sensors to a csv file on storage
 void logSensors(){
   if(!timeSynchronized){
-    LOG_ERR("Time is not sync\n");
+    LOG_E("Time is not sync\n");
     return;
   } 
   String sep="\t";  
   String fullPath =getLogFileName();
   String line = "";
   if(!STORAGE.exists(fullPath)){
-    LOG_DBG("New log file: %s\n", fullPath.c_str());
+    LOG_D("New log file: %s\n", fullPath.c_str());
     line += "DateTime               " + sep;
     line += "temp" + sep;
     line += "humid" + sep;
@@ -222,6 +222,6 @@ void logSensors(){
   line += String(data.batPerc, 0);
   line +="\n";
   writeFile(fullPath.c_str(), line.c_str());
-  LOG_DBG("Log to: %s, line: %s", fullPath.c_str(),line.c_str() );
+  LOG_D("Log to: %s, line: %s", fullPath.c_str(),line.c_str() );
 }
 
