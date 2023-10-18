@@ -11,7 +11,7 @@ static void showLocalTime(const char* timeSrc) {
   time_t currEpoch = getEpoch();
   char timeFormat[20];
   strftime(timeFormat, sizeof(timeFormat), "%d/%m/%Y %H:%M:%S", localtime(&currEpoch));
-  LOG_INF("Got current time from %s: %s \n", timeSrc, timeFormat);
+  LOG_I("Got current time from %s: %s \n", timeSrc, timeFormat);
   timeSynchronized = true;
 }
 // Get mac id
@@ -26,14 +26,14 @@ String getChipID(){
 bool getLocalNTPTime() {
   if(timeZone=="") timeZone = conf["time_zone"];
   if(ntpServer=="") ntpServer = conf["ntp_server"];
-  LOG_INF("Using NTP server: %s with tz: %s\n", ntpServer.c_str(), timeZone.c_str());
+  LOG_I("Using NTP server: %s with tz: %s\n", ntpServer.c_str(), timeZone.c_str());
   configTzTime(timeZone.c_str(), ntpServer.c_str());
   if (getEpoch() > 10000) {
     showLocalTime("NTP");    
     return true;
   }
   else {
-    LOG_WRN("Not yet synced with NTP\n");
+    LOG_W("Not yet synced with NTP\n");
     return false;
   }
 }
@@ -47,12 +47,12 @@ void syncTime(){
       showLocalTime("NTP");
       return;  
     }else{
-      LOG_INF("Time not sync\n");
+      LOG_I("Time not sync\n");
     }
     delay(2000);
     tries--;
   };
-  if(tries==0) LOG_INF("Time sync: %i\n", timeSynchronized);
+  if(tries==0) LOG_I("Time sync: %i\n", timeSynchronized);
 }
 
 // Convert a string to time_t
@@ -106,7 +106,7 @@ bool isNumeric(String s){ //1.0, -.232, .233, -32.32
       if(sign) return false;
       else sign = true;
     }else if (!isDigit(s.charAt(i))){
-      LOG_INF("%c\n", s.charAt(i));
+      LOG_I("%c\n", s.charAt(i));
       return false;
     }
   }
@@ -133,13 +133,13 @@ bool isInt(const std::string& str)
 
 // Reset timer used for sleep
 void ResetCountdownTimer(const char *reason){
-  //LOG_DBG("Reset countdown:  %s.\n",reason);
+  //LOG_D("Reset countdown:  %s.\n",reason);
   sleepTimerCountdown = SLEEP_DELAY_INTERVAL; 
 }
 
 // Remove all ini files 
 void reset(){
-  LOG_WRN("Removing all ini files.");
+  LOG_W("Removing all ini files.");
   //listDir("/", 1);
   lastBoot.deleteConfig(LAST_BOOT_INI);
   STORAGE.remove(LAST_BAT_INI);
