@@ -6,49 +6,49 @@
 void writeFile(const char * path, const char * message) {
   File file = STORAGE.open(path, FILE_APPEND);
   if (!file) {
-    LOG_ERR("\nFailed to open: %s\n", path);
+    LOG_E("\nFailed to open: %s\n", path);
     return;
   }
   if (file.print(message)) {
-    LOG_DBG("Writing file: %s OK\n", path);
+    LOG_D("Writing file: %s OK\n", path);
   } else {
-    LOG_ERR("\nFailed to write: %s\n", path);
+    LOG_E("\nFailed to write: %s\n", path);
   }
   file.close();
 }
 // List a directory
 void listDir(const char * dirname, uint8_t levels) {
-  LOG_INF("Listing directory: %s\n", dirname);
+  LOG_I("Listing directory: %s\n", dirname);
 
   File root = STORAGE.open(dirname);
   if (!root) {
-    LOG_ERR("- failed to open directory\n");
+    LOG_E("- failed to open directory\n");
     return;
   }
   if (!root.isDirectory()) {
-    LOG_ERR(" - not a directory\n");
+    LOG_E(" - not a directory\n");
     return;
   }
 
   File file = root.openNextFile();
   while (file) {
     if (file.isDirectory()) {
-      LOG_INF("  Dir: %s\n", file.name());
+      LOG_I("  Dir: %s\n", file.name());
       if (levels) {
         listDir(file.name(), levels - 1);
       }
     } else {
-      LOG_INF("  File: %s, sz: %lu\n", file.path(), file.size());
+      LOG_I("  File: %s, sz: %lu\n", file.path(), file.size());
     }
     file = root.openNextFile();
   }
 }
 //List dir and files sorded by name disc
 bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<std::vector<String>> &fileArr ) {
-  LOG_INF("Listing directory: %s\n", dirName.c_str());
+  LOG_I("Listing directory: %s\n", dirName.c_str());
   File root = STORAGE.open(dirName.c_str());
   if (!root) {
-    LOG_ERR("Failed to open dir: %s\n", dirName.c_str());
+    LOG_E("Failed to open dir: %s\n", dirName.c_str());
     return "";
   }
   
@@ -64,7 +64,7 @@ bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<std:
       dirArr.push_back(dirPath);
     }
     String subDir = filePath.substring( 0, filePath.lastIndexOf("/") );
-    LOG_DBG("List Dir: %s, sub Dir: %s  file: %s, sz: %lu\n", 
+    LOG_D("List Dir: %s, sub Dir: %s  file: %s, sz: %lu\n", 
       dirPath.c_str(), subDir.c_str(), fileName.c_str(), file.size());
     
     if(dirName == subDir)
@@ -90,7 +90,7 @@ String getOldestDir(String dirName){
 
  File root = STORAGE.open(dirName.c_str());
   if (!root) {
-    LOG_ERR("Failed to open dir: %s\n", dirName.c_str());
+    LOG_E("Failed to open dir: %s\n", dirName.c_str());
     return "";
   }
   
@@ -105,7 +105,7 @@ String getOldestDir(String dirName){
 
     if(oPath != dirPath ){
       oPath = dirPath;
-      LOG_DBG("dir: %s, file: %s\n", dirPath.c_str(), fileName.c_str());
+      LOG_D("dir: %s, file: %s\n", dirPath.c_str(), fileName.c_str());
       dirArr.push_back(dirPath);
     }   
     file = root.openNextFile();
@@ -124,7 +124,7 @@ bool isDirectory(String d) { return d.indexOf("/") >=0; }
 void removeFolder(String dirName){
   File root = STORAGE.open(dirName.c_str());
   if (!root) {
-    LOG_ERR("Failed to open dir: %s\n", dirName.c_str());
+    LOG_E("Failed to open dir: %s\n", dirName.c_str());
     return;
   }
   
@@ -132,22 +132,22 @@ void removeFolder(String dirName){
   while (file) {
     String filePath = file.path();
     file = root.openNextFile();
-    LOG_INF("Removing file: %s \n", filePath.c_str());
+    LOG_I("Removing file: %s \n", filePath.c_str());
     /*
     if(!STORAGE.remove(filePath.c_str())){
-      LOG_ERR("Remove FAILED: %s \n", filePath.c_str());
+      LOG_E("Remove FAILED: %s \n", filePath.c_str());
     };*/
   }
-  LOG_INF("Removing dir: %s \n", dirName.c_str());
+  LOG_I("Removing dir: %s \n", dirName.c_str());
   //STORAGE.rmdir(dirName);
 }
 
 // Check an delete logs to save space
 void checkLogRotate(){
   size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
-  LOG_INF("Storage, free: %lu K\n", (free/1024));
+  LOG_I("Storage, free: %lu K\n", (free/1024));
   if(free < MIN_STORAGE_SPACE){
-    LOG_WRN("Storage is running low, free: %lu\n", free);
+    LOG_W("Storage is running low, free: %lu\n", free);
     String oldestDir = getOldestDir(DATA_DIR);    
     removeFolder(oldestDir);
   }
