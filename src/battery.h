@@ -35,11 +35,11 @@ float calcBattery(uint16_t AdcVolt){
      float lastPerc = (atof(lastBoot["bat_perc"].c_str()));
      batPercAgv = ((lastPerc + truncateFloat(batPerc, 0) ) / 2.0F);
   }  
-  LOG_DBG("Battery last perc: %s, cur: %3.1f, avg: %3.1f\n", lastBoot["bat_perc"].c_str(), batPerc, batPercAgv);
+  LOG_D("Battery last perc: %s, cur: %3.1f, avg: %3.1f\n", lastBoot["bat_perc"].c_str(), batPerc, batPercAgv);
   
   if (batPerc > BATT_PERC_ONPOWER) onPower = true;
   else onPower = false;    
-  LOG_INF("Battery adcV: %lu, V: %3.3f, perc: %3.1f %%, onPower: %i\n", AdcVolt, battery_voltage, batPercAgv, onPower);
+  LOG_I("Battery adcV: %lu, V: %3.3f, perc: %3.1f %%, onPower: %i\n", AdcVolt, battery_voltage, batPercAgv, onPower);
   return batPercAgv;
   
 }
@@ -59,7 +59,7 @@ float calcBatteryDays(){
     //Reset counters
     lastBoot.put("boot_cnt", "0",true);
     lastBoot.put("boot_cnt_err", "0",true);
-    LOG_INF("Battery CHARGING, date: %s\n", curDate.c_str());    
+    LOG_I("Battery CHARGING, date: %s\n", curDate.c_str());    
   }else{ //Discharging
     onPower = false;
     daysOnBattery = 0.0F;
@@ -73,9 +73,9 @@ float calcBatteryDays(){
         daysOnBattery  = (tmNow - tmStart) / BATT_CHARGE_DATE_DIVIDER;
         if(daysOnBattery < 0.0F)  daysOnBattery = 0.0F;      
       }
-      //LOG_INF("Battery DISCHARGING, st: %lu, now: %lu\n", tmStart, tmNow);
+      //LOG_I("Battery DISCHARGING, st: %lu, now: %lu\n", tmStart, tmNow);
     }
-    LOG_INF("Battery DISCHARGING, date: %s, days: %5.3f\n", data.batChargeDate.c_str(), daysOnBattery);
+    LOG_I("Battery DISCHARGING, date: %s, days: %5.3f\n", data.batChargeDate.c_str(), daysOnBattery);
   }
   
   return daysOnBattery;
