@@ -69,7 +69,7 @@ bool setStaticIP(String st_ip){
   String s = st_ip.substring(0, ndx);
   s.trim();
   if(!ip.fromString(s)){
-    LOG_ERR("Error parsing static ip: %s\n",s.c_str());
+    LOG_E("Error parsing static ip: %s\n",s.c_str());
     return false;
   }
 
@@ -78,7 +78,7 @@ bool setStaticIP(String st_ip){
   s = st_ip.substring(0, ndx);
   s.trim();
   if(!mask.fromString(s)){
-    LOG_ERR("Error parsing static ip mask: %s\n",s.c_str());
+    LOG_E("Error parsing static ip mask: %s\n",s.c_str());
     return false;
   }
 
@@ -86,10 +86,10 @@ bool setStaticIP(String st_ip){
   s = st_ip;
   s.trim();
   if(!gw.fromString(s)){
-    LOG_ERR("Error parsing static ip gw: %s\n",s.c_str());
+    LOG_E("Error parsing static ip gw: %s\n",s.c_str());
     return false;
   }
-  LOG_INF("Wifi ST setting static ip: %s, mask: %s  gw: %s \n", ip.toString().c_str(), mask.toString().c_str(), gw.toString().c_str());
+  LOG_I("Wifi ST setting static ip: %s, mask: %s  gw: %s \n", ip.toString().c_str(), mask.toString().c_str(), gw.toString().c_str());
   WiFi.config(ip, gw, mask);
   return true;  
 }
@@ -111,8 +111,8 @@ bool connectToNetwork(){
     setStaticIP(st_ip);  
 
     //Wifi down, reconnect here
-    LOG_INF("Wifi ST connecting to: %s, %s \n",st_ssid.c_str(), st_pass.c_str());
-    //LOG_INF("Wifi ST connecting to: %s\n",st_ssid.c_str());
+    LOG_I("Wifi ST connecting to: %s, %s \n",st_ssid.c_str(), st_pass.c_str());
+    //LOG_I("Wifi ST connecting to: %s\n",st_ssid.c_str());
     WiFi.begin(st_ssid.c_str(), st_pass.c_str());      
     int col = 0;
     uint32_t startAttemptTime = millis();      
@@ -130,11 +130,11 @@ bool connectToNetwork(){
   }
   
   if (WiFi.status() != WL_CONNECTED){
-    LOG_ERR("Wifi connect fail\n");
+    LOG_E("Wifi connect fail\n");
     WiFi.disconnect();
     return false;
   }else{
-    LOG_INF("Wifi AP SSID: %s connected, use 'http://%s' to connect\n", st_ssid.c_str(), WiFi.localIP().toString().c_str()); 
+    LOG_I("Wifi AP SSID: %s connected, use 'http://%s' to connect\n", st_ssid.c_str(), WiFi.localIP().toString().c_str()); 
   }
   return true;
 }
@@ -191,7 +191,7 @@ static void handleRoot(){
   //Parse json data
   error = deserializeJson(doc, jsonBuff.c_str());  
   if (error) { 
-    LOG_ERR("Deserialize Json failed: %s\n", error.c_str());
+    LOG_E("Deserialize Json failed: %s\n", error.c_str());
     return;
   }
   JsonObject root = doc.as<JsonObject>();
@@ -206,7 +206,9 @@ static void handleRoot(){
   pServer->sendContent(HTML_PAGE_HOME_CSS);
   pServer->sendContent(HTML_PAGE_HOME_SCRIPT);
   //Send time sync script on AP
-  if(USE_TIMESYNC && apStarted) pServer->sendContent("<script>" + conf.getTimeSyncScript() + "</script>");
+#ifdef CA_USE_TIMESYNC
+  if(apStarted) pServer->sendContent("<script>" + conf.getTimeSyncScript() + "</script>");
+#endif
   out = HTML_PAGE_HOME_BODY;
   out.replace("{host_name}",conf["host_name"]);
   out.replace("{plant_name}",conf["plant_name"]);
@@ -227,11 +229,11 @@ static void handleRoot(){
 
   String end(HTML_PAGE_HOME_END);
   end.replace("{appVer}", APP_VER );
-  if(STORAGE.exists(LOG_FILENAME)){
+  if(STORAGE.exists(LOGGER_LOG_FILENAME)){
     String btView(HTML_PAGE_HOME_BUTTON_VIEWLOG);
     String btReset(HTML_PAGE_HOME_BUTTON_RESETLOG);
-    btView.replace("{log}", LOG_FILENAME);
-    btReset.replace("{log}", LOG_FILENAME);
+    btView.replace("{log}", LOGGER_LOG_FILENAME);
+    btReset.replace("{log}", LOGGER_LOG_FILENAME);
     end.replace("<!--Custom-->", "<br>\n" + btView + "\n" + btReset);
   }  
   pServer->sendContent(end);
@@ -246,14 +248,14 @@ static void handleViewFile(String fileName, bool download=false){
   if (!f) {
     f.close();
     const char* resp_str = "File does not exist or cannot be opened";
-    LOG_ERR("%s: %s", resp_str, fileName.c_str());
+    LOG_E("%s: %s", resp_str, fileName.c_str());
     pServer->send(200, "text/html", resp_str);
     pServer->client().flush(); 
     return;  
   }
   if (download) {  
     // download file as attachment, required file name in inFileName
-    LOG_INF("Download file: %s, size: %0.1f K", fileName.c_str(), (float)(f.size()/(1024)));
+    LOG_I("Download file: %s, size: %0.1f K", fileName.c_str(), (float)(f.size()/(1024)));
     pServer->sendHeader("Content-Type", "text/text");
     int n = fileName.lastIndexOf( '/' );
     String downloadName = conf["host_name"] + "_" + fileName.substring( n + 1 );
@@ -262,13 +264,13 @@ static void handleViewFile(String fileName, bool download=false){
     pServer->sendHeader("Connection", "close");
     size_t sz = pServer->streamFile(f, "application/octet-stream");
     if (sz != f.size()) {
-      LOG_ERR("File: %s, Sent %lu, expected: %lu!\n", fileName.c_str(), sz, f.size()); 
+      LOG_E("File: %s, Sent %lu, expected: %lu!\n", fileName.c_str(), sz, f.size()); 
     } 
     f.close();
     return;
   }
 
-  LOG_INF("View file: %s, size: %0.1f K\n", fileName.c_str(), (float)(f.size()/(1024)));
+  LOG_I("View file: %s, size: %0.1f K\n", fileName.c_str(), (float)(f.size()/(1024)));
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   byte chunk[CHUNKSIZE];
   size_t chunksize;
@@ -284,7 +286,7 @@ static void handleViewFile(String fileName, bool download=false){
 static void handleCmd(){
   //WebServer::args() ignores empty parameters 
   for (int i = 0; i < pServer->args(); i++) {
-    LOG_DBG("Cmds received: [%i] %s, %s \n",i, pServer->argName(i), pServer->arg(i).c_str()  );
+    LOG_D("Cmds received: [%i] %s, %s \n",i, pServer->argName(i), pServer->arg(i).c_str()  );
     String out(conf.getMessageHtml());
     out.replace("{refresh}", "3000");
     String cmd(pServer->argName(i));    
@@ -356,21 +358,8 @@ static void handleCmd(){
       reset();
    }else if(cmd=="resetLog"){
       out.replace("{title}", "Reseting log");
-      if (ca_logFile){
-        ca_logFile.close();
-        STORAGE.remove(LOG_FILENAME);
-        ca_logFile = STORAGE.open(LOG_FILENAME, FILE_APPEND);
-        if( !ca_logFile ) {
-          out.replace("{msg}", "Failed to reset log file..");
-          Serial.printf("Failed to open log %s\n", LOG_FILENAME);
-          ca_logToFile = false;
-        }else{
-          out.replace("{msg}", "Reseted log file");
-        }
-      }else{
-        STORAGE.remove(LOG_FILENAME);
-        out.replace("{msg}", "Deleted log file");
-      }
+      STORAGE.remove(LOGGER_LOG_FILENAME);
+      out.replace("{msg}", "Deleted log file");
     }else{
       out.replace("{title}", "Error");
       out.replace("{msg}", "Unknown command:" + cmd);
@@ -482,19 +471,19 @@ static void handleCharts(){
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
     switch(type) {
         case WStype_DISCONNECTED:
-            LOG_INF("Websocket [%u] Disconnected!\n", num);
+            LOG_I("Websocket [%u] Disconnected!\n", num);
             break;
         case WStype_CONNECTED:
             {
               IPAddress ip = pWebSocket->remoteIP(num);
-              LOG_INF("Websocket [%u] connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+              LOG_I("Websocket [%u] connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
 
               // send message to client
               pWebSocket->sendTXT(num, "Connected");
             }
             break;
         case WStype_TEXT:
-            LOG_DBG("[%u] get Text: %s\n", num, payload);
+            LOG_D("[%u] get Text: %s\n", num, payload);
             ResetCountdownTimer("Websocket text");
             // send message to client
             // webSocket.sendTXT(num, "message here");
@@ -503,7 +492,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
             // webSocket.broadcastTXT("message here");
             break;
         case WStype_BIN:
-            LOG_DBG("[%u] get binary length: %u\n", num, length);
+            LOG_D("[%u] get binary length: %u\n", num, length);
             // send message to client
             // webSocket.sendBIN(num, payload, length);
             break;
@@ -528,14 +517,14 @@ bool isClientConnected(WEB_SERVER *pServer){
 
   apClients = WiFi.softAPgetStationNum();
   if(apClients>0){
-    LOG_DBG("Connected, AP Clients: %u\n", apClients);
+    LOG_D("Connected, AP Clients: %u\n", apClients);
     return true;
   }
   if(pServer==NULL) return false;
 
   WiFiClient myclient = pServer->client();
   if(myclient && myclient.connected()){
-    LOG_INF("Connected, ST client\n");
+    LOG_I("Connected, ST client\n");
     return true;
   }
   return false;
@@ -557,7 +546,7 @@ void registerHandlers(){
   pServer->on("/fs", handleFileSytem);
   pServer->on("/chrt", handleCharts);
   pServer->on("/favicon.ico", handleFavIcon);
-  LOG_INF("Registered web handlers\n");
+  LOG_I("Registered web handlers\n");
 }
 
 // Start the websocket server
@@ -566,17 +555,17 @@ void startWebSockets(){
   pWebSocket = new WebSocketsServer(81);
   pWebSocket->begin();
   pWebSocket->onEvent(webSocketEvent);
-  LOG_INF("Started web sockets at port: 81\n");  
+  LOG_I("Started web sockets at port: 81\n");  
 }
 
 // Start the web server
 void startWebSever(){
   if(pServer) return;
   if (MDNS.begin(conf["host_name"].c_str()))  
-    LOG_INF("MDNS responder Started\n");
+    LOG_I("MDNS responder Started\n");
   pServer = new WebServer(80);
   pServer->begin();
-  LOG_INF("Started web server at port: 80\n");
+  LOG_I("Started web server at port: 80\n");
   //Register server handlers
   registerHandlers();
   //Start websockets
