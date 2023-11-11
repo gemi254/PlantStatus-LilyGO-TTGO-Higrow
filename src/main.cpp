@@ -29,7 +29,7 @@ bool logToFile = true;
 static File logFile;
 void _log_printf(const char *format, ...);
 
-#include <configAssist.h>        //Config assist class
+#include <ConfigAssist.h>        //Config assist class
 #include "user-variables.h"
 
 #define APP_VER "1.2.1"   // Delete log files & fix home link
