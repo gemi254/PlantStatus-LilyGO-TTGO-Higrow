@@ -3,7 +3,7 @@
 // *******************************************************************************************************************************
 #include <Arduino.h>
 // Modify the file with the default params for you application
-const char* appConfigDict_json PROGMEM = R"~(
+const char* VARIABLES_DEF_JSON PROGMEM = R"~(
 [{
 "seperator": "Wifi settings"
 },{
