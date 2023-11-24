@@ -102,7 +102,7 @@ Commands can be
 * `variable=val` in order to set a variable to a value
 * `variable+=val` to increase or decrease value.
 
-Valid parameters names with default values are defined in `include/user-variables.h`  line: 27 const char* appConfigDict_json 
+Valid parameters names with default values are defined in `include/user-variables.h`  line: 27 const char* VARIABLES_DEF_JSON 
 
 Fom example from a mqtt broker server publish the command with the parameter you want to change..
 
