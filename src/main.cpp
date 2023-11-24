@@ -7,24 +7,19 @@
 #include <DHT.h>
 #include <WiFi.h>
 #include <NTPClient.h>
-#include <SPI.h>
 #include <PubSubClient.h>
-#include <Esp.h>
 #include <time.h>
 #include <TimeLib.h>
 #include "driver/adc.h"
-#include <esp_wifi.h>
 #include "esp32/rom/rtc.h"
-#include <esp_bt.h>
 #include <18B20_class.h>
 #include <Adafruit_BME280.h>
-#include <WiFiClientSecure.h>
 #include <WebSocketsServer.h>
-#include <WebServer.h>
 #include "SPIFFS.h"
 #include <ESPmDNS.h>
-#define LOGGER_LOG_MODE  3          // External
-#define LOGGER_LOG_LEVEL 2          // Errors & Warnings & Info & Debug & Verbose
+
+#define LOGGER_LOG_MODE  3       // External
+#define LOGGER_LOG_LEVEL 2       // Errors & Warnings & Info & Debug & Verbose
 bool logToFile = true;
 static File logFile;
 void _log_printf(const char *format, ...);
@@ -32,7 +27,7 @@ void _log_printf(const char *format, ...);
 #include <ConfigAssist.h>        //Config assist class
 #include "user-variables.h"
 
-#define APP_VER "1.2.1"   // Delete log files & fix home link
+#define APP_VER "1.2.2"          // Update config assist
 
 #define LED_PIN 13
 #define I2C_SDA 25
@@ -49,21 +44,21 @@ void _log_printf(const char *format, ...);
 #define LAST_BOOT_INI "/lastboot.ini"
 #define LAST_BAT_INI   "/batinf.ini"
 #define CONNECT_TIMEOUT 8000
-#define MAX_SSID_ARR_NO 2 //Maximum ssid json will describe
+#define MAX_SSID_ARR_NO 2 // Maximum ssid json will describe
 
-#define BATT_NO_OF_SAMPLES     8     //Samples to read from BAT_ADC
-#define SOIL_NO_OF_SAMPLES     8     //Samples to read from SOIL_PIN
+#define BATT_NO_OF_SAMPLES     8     // Samples to read from BAT_ADC
+#define SOIL_NO_OF_SAMPLES     8     // Samples to read from SOIL_PIN
 
-//#define DEBUG_BATTERY                //Uncomment to log bat adc values
+//#define DEBUG_BATTERY              // Uncomment to log bat adc values
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
 #define BATT_PERC_ONPOWER (110.0F)
 
-#define uS_TO_S_FACTOR 1000000ULL     //Conversion factor for micro seconds to seconds
-#define SLEEP_CHECK_INTERVAL   1000   //Check if it is time to sleep (millis)
-#define SLEEP_DELAY_INTERVAL   30000  //After this time with no activity go to sleep
-#define SENSORS_READ_INTERVAL  10000  //Sensors read inverval in milliseconds on loop mode, 30 sec 
-#define RESET_CONFIGS_INTERVAL 10000L //Interval press user button to factory defaults.
-#define TIME_SYNC_LOOPS  5            //Synchronize time every n loops
+#define uS_TO_S_FACTOR 1000000ULL     // Conversion factor for micro seconds to seconds
+#define SLEEP_CHECK_INTERVAL   1000   // Check if it is time to sleep (millis)
+#define SLEEP_DELAY_INTERVAL   30000  // After this time with no activity go to sleep
+#define SENSORS_READ_INTERVAL  10000  // Sensors read inverval in milliseconds on loop mode, 30 sec 
+#define RESET_CONFIGS_INTERVAL 10000L // Interval press user button to factory defaults.
+#define TIME_SYNC_LOOPS  5            // Synchronize time every n loops
 
 // json sensors data 
 struct SensorData
@@ -75,10 +70,10 @@ struct SensorData
   float lux;
   float temp;
   float humid;
-  //float soilTemp;
+  // float soilTemp;
   uint8_t soil;
   uint8_t salt;
-  //String saltadvice;
+  // String saltadvice;
   float batPerc;  
   float batVolt;
   uint16_t batAdcVolt;
@@ -98,21 +93,21 @@ RTC_DATA_ATTR int bootCntError = 0;
 uint16_t adcVolt = 0;
 
 // Timers
-unsigned long sleepTimerCountdown = 2000; //Going to sleep timer
-unsigned long sensorReadMs = millis() + SENSORS_READ_INTERVAL;    //Sensors read inteval
-unsigned long sleepCheckMs = millis();    //Check for sleep interval
-unsigned long btPressMs = 0;              //Button pressed ms
+unsigned long sleepTimerCountdown = 2000; // Going to sleep timer
+unsigned long sensorReadMs = millis() + SENSORS_READ_INTERVAL;    // Sensors read inteval
+unsigned long sleepCheckMs = millis();    // Check for sleep interval
+unsigned long btPressMs = 0;              // Button pressed ms
 
 // Bool vars
 bool bmeFound = false;
 bool dhtFound = false;
-bool onPower = false;              //Is battery is charging
-bool wifiConnected = false;        //Wifi connected
-bool apStarted = false;            //AP started
+bool onPower = false;              // Is battery is charging
+bool wifiConnected = false;        // Wifi connected
+bool apStarted = false;            // AP started
 bool clearMqttRetain = false;
-static String chipID;              //Wifi chipid
-static String topicsPrefix;        //Subscribe to topics
-static uint8_t apClients = 0;      //Connected ap clients
+static String chipID;              // Wifi chipid
+static String topicsPrefix;        // Subscribe to topics
+static uint8_t apClients = 0;      // Connected ap clients
 
 // User button
 bool btPress = false;
@@ -127,10 +122,10 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
 // Sensors
-BH1750 lightMeter(0x23);          //0x23
-#define LUX_AUTOAJUST             //Auto adjust BH1750 Time register
+BH1750 lightMeter(0x23);          // 0x23
+#define LUX_AUTOAJUST             // Auto adjust BH1750 Time register
 
-Adafruit_BME280 *pBmp = NULL;     //0x77
+Adafruit_BME280 *pBmp = NULL;     // 0x77
 DHT *pDht=NULL;
 DS18B20 *pTemp18B20 = NULL;
 WebServer *pServer = NULL;
@@ -141,8 +136,8 @@ WebSocketsServer *pWebSocket = NULL;
 #endif
 
 // App config 
-ConfigAssist conf;               //Config class
-ConfigAssist lastBoot(LAST_BOOT_INI);           //Save last boot vars
+ConfigAssist conf(CA_DEF_CONF_FILE, VARIABLES_DEF_JSON);   // Config class
+ConfigAssist lastBoot(LAST_BOOT_INI);                      // Save last boot vars
 
 #include <files.h>
 #include <utils.h>
@@ -180,12 +175,8 @@ void setup()
   }
   LOG_I("* * * * Starting v%s * * * * * \n", APP_VER);  
 
-  //Initialize config class
-  conf.setJsonDict(appConfigDict_json);
-  
   //Enable configAssist logPrint to file
   logToFile = conf["logFile"].toInt();
-  
   //Failed to load config or ssid empty
   if(!conf.valid() || conf["st_ssid1"]==""){ 
     startAP();
