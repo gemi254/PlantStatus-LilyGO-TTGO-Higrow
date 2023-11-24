@@ -176,11 +176,7 @@ static void handleAssistRoot() {
   if(pServer->args() == 0)
     pServer->sendContent(String(HTML_PING_SCRIPT));
 }
-// Handler function for AP config form
-static void handleAssistScan() { 
-  conf.handleWifiScanRequest();   
-}
-  
+
 // Handler function for root of the web page 
 static void handleRoot(){
   //Read on each refresh
@@ -539,8 +535,8 @@ void registerHandlers(){
   //Handlers are registered by configAssist
   if(!apStarted){
     pServer->on("/cfg", handleAssistRoot );
-    pServer->on("/scan", handleAssistScan );
-    conf.setup(*pServer, false);
+    //pServer->on("/scan", handleAssistScan );
+    conf.setup(*pServer);
   }  
   pServer->on("/pg", handlePing);
   pServer->on("/fs", handleFileSytem);
