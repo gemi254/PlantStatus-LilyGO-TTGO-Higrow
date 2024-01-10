@@ -19,7 +19,7 @@
 #include <ESPmDNS.h>
 
 #define LOGGER_LOG_MODE  3       // External
-#define LOGGER_LOG_LEVEL 2       // Errors & Warnings & Info & Debug & Verbose
+#define LOGGER_LOG_LEVEL 4       // Errors & Warnings & Info & Debug & Verbose
 bool logToFile = true;
 static File logFile;
 void _log_printf(const char *format, ...);
@@ -27,7 +27,7 @@ void _log_printf(const char *format, ...);
 #include <ConfigAssist.h>        //Config assist class
 #include "user-variables.h"
 
-#define APP_VER "1.2.2"          // Update config assist
+#define APP_VER "1.2.3"          // Update config assist && move to yaml config
 
 #define LED_PIN 13
 #define I2C_SDA 25
@@ -136,7 +136,7 @@ WebSocketsServer *pWebSocket = NULL;
 #endif
 
 // App config 
-ConfigAssist conf(CA_DEF_CONF_FILE, VARIABLES_DEF_JSON);   // Config class
+ConfigAssist conf(CA_DEF_CONF_FILE, VARIABLES_DEF_YAML);   // Config class
 ConfigAssist lastBoot(LAST_BOOT_INI);                      // Save last boot vars
 
 #include <files.h>
@@ -144,7 +144,7 @@ ConfigAssist lastBoot(LAST_BOOT_INI);                      // Save last boot var
 #include <sleep.h>
 #include <battery.h>
 #include <sensors.h>
-#include <appPmem.h>
+#include <appPMem.h>
 #include <chartsPMem.h>
 #include <network.h>
 #include <mqtt.h>
