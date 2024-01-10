@@ -222,6 +222,6 @@ void logSensors(){
   line += String(data.batPerc, 0);
   line +="\n";
   writeFile(fullPath.c_str(), line.c_str());
-  LOG_D("Log to: %s, line: %s", fullPath.c_str(),line.c_str() );
+  LOG_D("Log to: %s\n, line: %s", fullPath.c_str(),line.c_str() );
 }
 
