@@ -1,3 +1,4 @@
+APP_VER "1.2.3" // Updated ConfigAssist v2.7.8
 APP_VER "1.2.2" // Updated ConfigAssist v2.7.3
 APP_VER "1.2.1" // Updated ConfigAssist v2.7.1
 APP_VER "1.2.0" // Delete log files & fix home link. Updated configAssist v 2.6.6
