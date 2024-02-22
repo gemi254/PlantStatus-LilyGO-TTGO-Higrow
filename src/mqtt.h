@@ -6,10 +6,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String msg="";
   for (int i = 0; i < length; i++) {
     msg+= ((char)payload[i]);
-  }  
+  }
   clearMqttRetain = true;
   LOG_I("Mqtt rcv topic: %s, msg: %s\n", topic, msg.c_str());
-  
+
   //Messages as 'cmd=val'
   char *token = NULL;
   char seps[] = "=";
@@ -19,7 +19,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     return;
   }
   String key(token);
-  
+
   token = strtok( NULL, seps );
   if(token==NULL){
     LOG_E("Unknown msg: %s \n", msg.c_str());
@@ -37,7 +37,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       startWebSever();
     }
   }else if(key=="hasDiscovery"){
-      mqttSetupDevice(getChipID()); 
+      mqttSetupDevice(getChipID());
   }else{
     //Increasments, offs+=1, offs-=1.5
     if(key.endsWith("+") || key.endsWith("-")){
@@ -50,7 +50,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
           return;
         }
 
-        String kval = conf[key];        
+        String kval = conf[key];
         if(!isNumeric(kval)){
           LOG_E("Non numeric: %s\n", kval.c_str());
           return;
@@ -66,7 +66,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
           LOG_D("Key[%s] inc int: %i %c %i = %i\n", key.c_str(), i, sign, inc, n);
           conf.put(key, String(n) );
         //Float
-        }else if(isFloat(kval.c_str()) && isFloat(val.c_str()) ){  
+        }else if(isFloat(kval.c_str()) && isFloat(val.c_str()) ){
           float v = atof(kval.c_str());
           float inc = atof(val.c_str());
           float n;
@@ -84,7 +84,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       LOG_D("Update key: %s=%s\n", key.c_str(), val.c_str());
     }
     conf.saveConfigFile();
-  }  
+  }
 }
 
 // Reset retained messages recv
@@ -96,7 +96,7 @@ void clearMqttRetainMsg(){
     mqttClient.loop();
     //delay(1000);
     clearMqttRetain = false;
-  } 
+  }
 }
 
 //Send mqtt autodiscovery messages
@@ -120,18 +120,18 @@ void mqttSetup(String identyfikator, String chipId, String uom = "x", String dc 
   if ( uom != "x" ) {
     root["unit_of_measurement"] = uom;
   }
-  
+
   StaticJsonDocument<256> doc_c0;
   JsonObject dev_root = doc_c0.to<JsonObject>();
 
   dev_root["identifiers"] = chipId;
-  dev_root["manufacturer"] = "LILYGO"; 
+  dev_root["manufacturer"] = "LILYGO";
   dev_root["model"] = conf["host_name"];
   dev_root["name"] = conf["plant_name"];
   dev_root["sw_version"] = APP_VER;
 
   root["dev"] = dev_root;
-  
+
   //Send to mqtt
   char buffer_c[1536];
   serializeJson(doc_c, buffer_c);
@@ -157,10 +157,12 @@ if (mqttClient.publish(topic_c, buffer_c, retained)) {
 
 // Home Assitant MQTT Autodiscovery messages
 // https://www.home-assistant.io/integrations/sensor/#device-class
-void mqttSetupDevice(String chipId){    
+void mqttSetupDevice(String chipId){
     Serial.println("Setting homeassistant mqtt device..");
     mqttSetup("lux",            chipId, "lx", "illuminance");
     mqttSetup("humid",          chipId, "%",  "humidity");
+    if(conf["dht_type"]=="BMP280")
+      mqttSetup("press",           chipId, "hPa",  "pressure");
     mqttSetup("soil",           chipId, "%",  "humidity");
     mqttSetup("salt",           chipId, "x");
     mqttSetup("temp",           chipId, "°C", "temperature");
@@ -184,28 +186,29 @@ void subscribeConfig(){
 String getJsonBuff(){
 
   StaticJsonDocument<1536> doc;
-  //Set the values in the document according to SensorData  
+  //Set the values in the document according to SensorData
   JsonObject plant = doc.to<JsonObject>();
- 
+
   plant["sensorName"] = conf["plant_name"];
   //plant["deviceName"] = conf["host_name"];
   //plant["chipId"] = chipID;
   plant["time"] = data.time;
-  plant["lux"] = truncateFloat(data.lux + atof(conf["offs_lux"].c_str()), 1); 
+  plant["lux"] = truncateFloat(data.lux + atof(conf["offs_lux"].c_str()), 1);
   plant["temp"] = truncateFloat(data.temp + atof(conf["offs_temp"].c_str()), 1);
   plant["humid"] = truncateFloat(data.humid + atof(conf["offs_humid"].c_str()), 1);
-  plant["pressure"] = truncateFloat(data.pressure + atof(conf["offs_pressure"].c_str()), 1);
+  if(conf["dht_type"]=="BMP280")
+    plant["pressure"] = truncateFloat(data.pressure + atof(conf["offs_pressure"].c_str()), 1);
   plant["soil"] = (data.soil + conf["offs_soil"].toInt());
   plant["salt"] = (data.salt + conf["offs_salt"].toInt());
-  // plant["soilTemp"] = config.soilTemp; 
+  // plant["soilTemp"] = config.soilTemp;
   // plant["saltadvice"] = config.saltadvice;
-  // plant["plantValveNo"] = plantValveNo; 
+  // plant["plantValveNo"] = plantValveNo;
   // plant["wifissid"] = WiFi.SSID();
   plant["batChargeDate"] = data.batChargeDate;
   plant["batPerc"] = data.batPerc;
-#ifdef DEBUG_BATTERY  
+#ifdef DEBUG_BATTERY
   plant["batADC"] = data.batAdcVolt;
-#endif  
+#endif
   plant["batVolt"] = truncateFloat(data.batVolt, 2);
   plant["batDays"] = truncateFloat(data.batDays, 1);
   //plant["batLastPerc"] = lastBoot["bat_perc"];
@@ -213,18 +216,18 @@ String getJsonBuff(){
   //plant["batLastVolt"] = truncate( atof(lastBoot["bat_voltage"].c_str()), 2);
   plant["onPower"] = onPower;
   plant["bootCount"] = data.bootCnt;
-  plant["bootCountError"] = data.bootCntError;    
+  plant["bootCountError"] = data.bootCntError;
   plant["loopMillis"] = millis() - appStart;
   plant["sleepReason"] = data.sleepReason;
   plant["RSSI"] = WiFi.RSSI(); //wifiRSSI;
-  
+
   #if defined(DEBUG_MQTT)
     serializeJsonPretty(doc, Serial);
     Serial.println();
   #endif
   //Send to mqtt
   char buffer[1536];
-  serializeJson(doc, buffer);  
+  serializeJson(doc, buffer);
   return String(buffer);
 }
 void mqttConnect(){
@@ -238,7 +241,7 @@ void mqttConnect(){
     LOG_E("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
     goToDeepSleep("mqttConnectFail");
   }else{
-    LOG_I("Connecting to MQTT broker: %s:%i OK\n", broker, port);  
+    LOG_I("Connecting to MQTT broker: %s:%i OK\n", broker, port);
   }
 }
 // Publish sensors data to mqtt
@@ -247,7 +250,7 @@ void publishSensors(const SensorData &data) {
 
   if(mqttClient.state() != MQTT_CONNECTED)
     mqttConnect();
-  
+
   if(!mqttClient.connected())  return;
   //Publish status
   topicsPrefix = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipID;
@@ -255,15 +258,15 @@ void publishSensors(const SensorData &data) {
   const char* topic = topicStr.c_str();
 
   String jsonBuff = getJsonBuff();
-  
+
   LOG_D("Sending message to topic: %s\n",topic);
   #if not defined(DEBUG_MQTT)
-    bool retained = true;  
+    bool retained = true;
     if (mqttClient.publish(topic, jsonBuff.c_str(), retained)) {
       LOG_D("Message published\n");
     } else {
       LOG_E("Error in Message, not published\n");
       goToDeepSleep("mqttPublishFailed");
-    }    
+    }
   #endif
 }
