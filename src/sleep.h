@@ -8,9 +8,9 @@ void goToDeepSleep(const char *reason, bool error=true)
   if(onPower && error){
     LOG_W("OnPower, no sleep on error: %s\n", reason);
     return;
-  } 
+  }
   mqttClient.disconnect();
-  
+
   //Disable wifi
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
@@ -21,13 +21,13 @@ void goToDeepSleep(const char *reason, bool error=true)
   //Configure the timer to wake us up!
   esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
   esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
-  
+
   //Remember last boot vals
   if(error) lastBoot.put("boot_cnt_err", String(lastBoot["boot_cnt_err"].toInt() + 1), true);
   else lastBoot.put("boot_cnt", String(lastBoot["boot_cnt"].toInt() + 1), true);
   lastBoot.put("sleep_reason", String(reason), true);
   lastBoot.put("bat_voltage", String(data.batVolt,2), true);
-  lastBoot.put("bat_perc", String(data.batPerc,0), true); 
+  lastBoot.put("bat_perc", String(data.batPerc,0), true);
   //Save last boot vars
   lastBoot.saveConfigFile(LAST_BOOT_INI);
 
