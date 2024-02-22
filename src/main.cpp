@@ -19,27 +19,32 @@
 #include <ESPmDNS.h>
 
 #define LOGGER_LOG_MODE  3       // External
-#define LOGGER_LOG_LEVEL 4       // Errors & Warnings & Info & Debug & Verbose
-bool logToFile = true;
+#define LOGGER_LOG_LEVEL 3       // Errors & Warnings & Info & Debug & Verbose
+bool logToFile = false;
 static File logFile;
 void _log_printf(const char *format, ...);
 
 #include <ConfigAssist.h>        //Config assist class
 #include "user-variables.h"
 
-#define APP_VER "1.2.3"          // Update config assist && move to yaml config
-
-#define LED_PIN 13
-#define I2C_SDA 25
-#define I2C_SCL 26
-#define DHT_PIN 16
-#define BAT_ADC 33
-#define SALT_PIN 34
-#define SOIL_PIN 32
-#define BOOT_PIN 0
-#define POWER_CTRL 4
-#define USER_BUTTON 35
-#define DS18B20_PIN 21
+#define APP_VER           "1.2.3"          // Update config assist && move to yaml config
+#define LED_PIN           (13)
+#define I2C_SDA           (25)
+#define I2C_SCL           (26)
+#define I2C1_SDA          (21)
+#define I2C1_SCL          (22)
+#define DHT_PIN           (16)
+#define BAT_ADC           (33)
+#define SALT_PIN          (34)
+#define SOIL_PIN          (32)
+#define BOOT_PIN          (0)
+#define POWER_CTRL        (4)
+#define USER_BUTTON       (35)
+#define DS18B20_PIN       (21)
+#define OB_BH1750_ADDRESS (0x23)
+#define OB_BH1750_ADDRESS (0x23)
+#define OB_BME280_ADDRESS (0x77)
+#define OB_SHT3X_ADDRESS  (0x44)
 
 #define LAST_BOOT_INI "/lastboot.ini"
 #define LAST_BAT_INI   "/batinf.ini"
@@ -49,18 +54,18 @@ void _log_printf(const char *format, ...);
 #define BATT_NO_OF_SAMPLES     8     // Samples to read from BAT_ADC
 #define SOIL_NO_OF_SAMPLES     8     // Samples to read from SOIL_PIN
 
-//#define DEBUG_BATTERY              // Uncomment to log bat adc values
+#define DEBUG_BATTERY              // Uncomment to log bat adc values
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
 #define BATT_PERC_ONPOWER (110.0F)
 
 #define uS_TO_S_FACTOR 1000000ULL     // Conversion factor for micro seconds to seconds
 #define SLEEP_CHECK_INTERVAL   1000   // Check if it is time to sleep (millis)
 #define SLEEP_DELAY_INTERVAL   30000  // After this time with no activity go to sleep
-#define SENSORS_READ_INTERVAL  10000  // Sensors read inverval in milliseconds on loop mode, 30 sec 
+#define SENSORS_READ_INTERVAL  10000  // Sensors read inverval in milliseconds on loop mode, 30 sec
 #define RESET_CONFIGS_INTERVAL 10000L // Interval press user button to factory defaults.
 #define TIME_SYNC_LOOPS  5            // Synchronize time every n loops
 
-// json sensors data 
+// json sensors data
 struct SensorData
 {
   String time;
@@ -74,7 +79,7 @@ struct SensorData
   uint8_t soil;
   uint8_t salt;
   // String saltadvice;
-  float batPerc;  
+  float batPerc;
   float batVolt;
   uint16_t batAdcVolt;
   String batChargeDate;
@@ -109,6 +114,8 @@ static String chipID;              // Wifi chipid
 static String topicsPrefix;        // Subscribe to topics
 static uint8_t apClients = 0;      // Connected ap clients
 
+bool wireOk = false;
+bool wireOk1 = false;
 // User button
 bool btPress = false;
 bool btState = false;
@@ -122,7 +129,7 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
 // Sensors
-BH1750 lightMeter(0x23);          // 0x23
+BH1750 lightMeter(OB_BH1750_ADDRESS);          // 0x23
 #define LUX_AUTOAJUST             // Auto adjust BH1750 Time register
 
 Adafruit_BME280 *pBmp = NULL;     // 0x77
@@ -131,11 +138,11 @@ DS18B20 *pTemp18B20 = NULL;
 WebServer *pServer = NULL;
 WebSocketsServer *pWebSocket = NULL;
 
-#ifdef USE_18B20_TEMP_SENSOR 
+#ifdef USE_18B20_TEMP_SENSOR
   DS18B20 temp18B20(DS18B20_PIN);
 #endif
 
-// App config 
+// App config
 ConfigAssist conf(CA_DEF_CONF_FILE, VARIABLES_DEF_YAML);   // Config class
 ConfigAssist lastBoot(LAST_BOOT_INI);                      // Save last boot vars
 
@@ -149,20 +156,24 @@ ConfigAssist lastBoot(LAST_BOOT_INI);                      // Save last boot var
 #include <network.h>
 #include <mqtt.h>
 
-// Application setup function 
+// Application setup function
 void setup()
-{  
+{
   appStart = millis(); //Application start time
- 
+
   //Power control pin, must set high to enable measurements
   pinMode(POWER_CTRL, OUTPUT);
-  digitalWrite(POWER_CTRL, 1);
+  digitalWrite(POWER_CTRL, HIGH);
   //Custom button setup
-  pinMode(USER_BUTTON, INPUT); 
+  pinMode(USER_BUTTON, INPUT);
+  pinMode(USER_BUTTON, INPUT);
   delay(100);
-  
+  // wire can not be initialized at beginng, the bus is busy
+  wireOk = Wire.begin(I2C_SDA, I2C_SCL);
+  wireOk1 = Wire1.begin(I2C1_SDA, I2C1_SCL);
+
   chipID = getChipID();
- 
+
   Serial.begin(115200);
   Serial.print("\n\n\n\n");
   Serial.flush();
@@ -173,48 +184,48 @@ void setup()
   if (!SPIFFS.begin(true)){
     Serial.print("Error mounting SPIFFS\n");
   }
-  LOG_I("* * * * Starting v%s * * * * * \n", APP_VER);  
+  LOG_I("* * * * Starting v%s * * * * * \n", APP_VER);
 
   //Enable configAssist logPrint to file
   logToFile = conf["logFile"].toInt();
   //Failed to load config or ssid empty
-  if(!conf.valid() || conf["st_ssid1"]==""){ 
+  if(!conf.valid() || conf["st_ssid1"]==""){
     startAP();
     return;
   }
-  
+
   //Time is ok on wake up but needs to be configured with tz
   setenv("TZ", conf["time_zone"].c_str(), 1);
- 
-  if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)  
+
+  if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)
     LOG_D("Wake up from sleep\n");
-  
-  //User button check at startup  
+
+  //User button check at startup
   btState = !digitalRead(USER_BUTTON);
   LOG_D("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
-  
+
   //Free space?
   //listDir("/", 3);
   checkLogRotate();
- 
+
   //Load last boot ini file
-  //STORAGE.remove(LAST_BOOT_INI); 
-  
+  //STORAGE.remove(LAST_BOOT_INI);
+
   if(!lastBoot.valid()){
     LOG_E("Invalid lastBoot file: %s\n", LAST_BOOT_INI);
     STORAGE.remove(LAST_BOOT_INI);
-  } 
-     
+  }
+
   //Battery & charging status.
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
 
   //Start ST WiFi
   wifiConnected = connectToNetwork();
-  //Fall back to AP if connection error and button pressed    
-  if(!wifiConnected && !digitalRead(USER_BUTTON) ){    
+  //Fall back to AP if connection error and button pressed
+  if(!wifiConnected && !digitalRead(USER_BUTTON) ){
     startAP();
     return;
-  } 
+  }
   //Synchronize time if needed or every n loops
   if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % TIME_SYNC_LOOPS ){
     if(wifiConnected) syncTime();
@@ -229,7 +240,7 @@ void setup()
 
   //Log sensors and go to sleep
   if(!wifiConnected) return;
-  
+
   //Connect to mqtt broker
   mqttConnect();
   if(mqttClient.connected())  //Listen config commands
@@ -238,7 +249,7 @@ void setup()
   //Start web server on long button press or on power connected?
   btState = !digitalRead(USER_BUTTON);
   if(btState){
-    startWebSever(); 
+    startWebSever();
     ResetCountdownTimer("Webserver start");
   }
 }
@@ -248,14 +259,14 @@ void loop(){
   mqttClient.loop();
   if(pServer) pServer->handleClient();
   if(pWebSocket) pWebSocket->loop();
-  //Read and publish sensors  
+  //Read and publish sensors
   if (millis() - sensorReadMs >= SENSORS_READ_INTERVAL){
     //Is time sync
     if(getEpoch() > 10000) timeSynchronized = true;
 
     //Read sensor values,
-    readSensors();    
-    
+    readSensors();
+
     //Append to log
     logSensors();
 
@@ -266,13 +277,13 @@ void loop(){
 
     //Publish JSON to mqtt
     publishSensors(data);
-  
+
     //Remember last volt
     lastBoot.put("bat_voltage", String(data.batVolt, 2),true);
     lastBoot.put("bat_perc", String(data.batPerc, 0),true);
-    
+
     data.sleepReason = "noSleep";
-    
+
     //Read battery status
     adcVolt =  readBatteryADC();
 
@@ -284,19 +295,19 @@ void loop(){
   if (millis() - sleepCheckMs >= SLEEP_CHECK_INTERVAL){
     //Sleep count down
     sleepTimerCountdown = (sleepTimerCountdown > SLEEP_CHECK_INTERVAL) ? (sleepTimerCountdown -= SLEEP_CHECK_INTERVAL) : 0L;
-    
+
     LOG_D("Sleep count down: %lu\n", sleepTimerCountdown);
-    
+
     if(isClientConnected(pServer)){
       //LOG_D("No sleep, clients connected\n");
       ResetCountdownTimer("Clients connected");
     }
-    //Timeout -> sleep  
-    if(sleepTimerCountdown <= 0L ){      
+    //Timeout -> sleep
+    if(sleepTimerCountdown <= 0L ){
       goToDeepSleep("sleepTimer", false);
-    } 
+    }
 
-    sleepCheckMs = millis();  
+    sleepCheckMs = millis();
   }
 
   //Check user button
@@ -307,14 +318,14 @@ void loop(){
     btPress = true;
     ResetCountdownTimer("Button down");
   }else if(btPress){ //Was pressed and released
-    //Update sensors 
+    //Update sensors
     sensorReadMs = millis() + SENSORS_READ_INTERVAL;
     btPress = false;
     LOG_D("Button press for: %lu\n", millis() - btPressMs);
     //Start ap
     if(millis() - btPressMs > RESET_CONFIGS_INTERVAL){
       startAP();
-      startWebSever(); 
+      startWebSever();
       ResetCountdownTimer("Long Button down");
       //reset();
       //delay(1009);
@@ -333,11 +344,11 @@ static char fmtBuf[MAX_LOG_FMT];
 static char outBuf[512];
 static va_list arglist;
 
-// Custom log print function 
+// Custom log print function
 void _log_printf(const char *format, ...){
   strncpy(fmtBuf, format, MAX_LOG_FMT);
   fmtBuf[MAX_LOG_FMT - 1] = 0;
-  va_start(arglist, format);  
+  va_start(arglist, format);
   vsnprintf(outBuf, MAX_LOG_FMT, fmtBuf, arglist);
   va_end(arglist);
   //size_t msgLen = strlen(outBuf);
