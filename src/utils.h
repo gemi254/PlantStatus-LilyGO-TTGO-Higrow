@@ -29,7 +29,7 @@ bool getLocalNTPTime() {
   LOG_I("Using NTP server: %s with tz: %s\n", ntpServer.c_str(), timeZone.c_str());
   configTzTime(timeZone.c_str(), ntpServer.c_str());
   if (getEpoch() > 10000) {
-    showLocalTime("NTP");    
+    showLocalTime("NTP");
     return true;
   }
   else {
@@ -45,7 +45,7 @@ void syncTime(){
   while(!sync && tries >= 0){
     if (getEpoch() > 10000) {
       showLocalTime("NTP");
-      return;  
+      return;
     }else{
       LOG_I("Time not sync\n");
     }
@@ -56,7 +56,7 @@ void syncTime(){
 }
 
 // Convert a string to time_t
-time_t convertDateTimeString(String sDateTime){  
+time_t convertDateTimeString(String sDateTime){
   tmElements_t tm;
   int Year, Month, Day, Hour, Minute, Second;
   sscanf(sDateTime.c_str(), "%d-%d-%d %d:%d:%d", &Year, &Month, &Day, &Hour, &Minute, &Second);
@@ -75,9 +75,9 @@ String getCurDateTimeString(bool isFolder = false, bool isFile=false) {
   if(!timeSynchronized) return "";
   size_t buff_Len = 64;
   char buff[buff_Len];
-  time_t currEpoch = getEpoch();    
+  time_t currEpoch = getEpoch();
   if(isFolder) strftime(buff, buff_Len, "/%Y-%m/", localtime(&currEpoch));
-  else if (isFile) strftime(buff, buff_Len, "%Y-%m-%d", localtime(&currEpoch));  
+  else if (isFile) strftime(buff, buff_Len, "%Y-%m-%d", localtime(&currEpoch));
   else strftime(buff, buff_Len, "%Y-%m-%d %H:%M:%S", localtime(&currEpoch));
   return String(buff);
 }
@@ -86,9 +86,9 @@ String getCurDateTimeString(bool isFolder = false, bool isFile=false) {
 String getSaltAdvice(uint32_t salt){
   String advice;
   if (salt < 201)        advice = "needed";
-  else if (salt < 251)   advice = "low";  
+  else if (salt < 251)   advice = "low";
   else if (salt < 351)   advice = "optimal";
-  else if (salt > 350)   advice = "too high";  
+  else if (salt > 350)   advice = "too high";
   return advice;
 }
 
@@ -134,10 +134,10 @@ bool isInt(const std::string& str)
 // Reset timer used for sleep
 void ResetCountdownTimer(const char *reason){
   //LOG_D("Reset countdown:  %s.\n",reason);
-  sleepTimerCountdown = SLEEP_DELAY_INTERVAL; 
+  sleepTimerCountdown = SLEEP_DELAY_INTERVAL;
 }
 
-// Remove all ini files 
+// Remove all ini files
 void reset(){
   LOG_W("Removing all ini files.");
   //listDir("/", 1);
