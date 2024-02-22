@@ -7,7 +7,7 @@ String valueUnits(String key, bool u = true){
     return u ? " °C" :   "Temperature";
   }else if(key=="humid"){
     return u ? " %":     "Humidity";
-  }else if(key=="batPerc"){    
+  }else if(key=="batPerc"){
     return u ? " %":     "Battery";
   }else if(key=="pressure"){
     return u ? " hPa":   "Pressure";
@@ -18,17 +18,17 @@ String valueUnits(String key, bool u = true){
   }else if(key=="RSSI"){
     return u ? " dBm":   "Signal";
   }else if(key=="batDays"){
-   return u ? " days":   "Battery Days";    
+   return u ? " days":   "Battery Days";
   }else if(key=="time"){
-   return u ? "":        "Date/Time";    
+   return u ? "":        "Date/Time";
   }else if(key=="sensorName"){
-   return u ? "":        "Name";    
+   return u ? "":        "Name";
   }else if(key=="BatDays"){
-   return u ? "":        "Battery days";    
+   return u ? "":        "Battery days";
   }else if(key=="batVolt"){
-   return u ? " Volt":   "Battery voltage";    
+   return u ? " Volt":   "Battery voltage";
   }else if(key=="batChargeDate"){
-   return u ? "":        "Last charged";    
+   return u ? "":        "Last charged";
   }
   return u ? "" : key;
 }
@@ -42,7 +42,7 @@ const char* valueSVG(String key){
   }else if(key=="humid"){
     return HTML_PAGE_SVG_RAIN;
   }else if(key=="soil"){
-    return HTML_PAGE_SVG_PERC_DROP; 
+    return HTML_PAGE_SVG_PERC_DROP;
   }else if(key=="salt"){
     return HTML_PAGE_SVG_EYE;
   }else if(key=="time"){
@@ -91,50 +91,50 @@ bool setStaticIP(String st_ip){
   }
   LOG_I("Wifi ST setting static ip: %s, mask: %s  gw: %s \n", ip.toString().c_str(), mask.toString().c_str(), gw.toString().c_str());
   WiFi.config(ip, gw, mask);
-  return true;  
+  return true;
 }
 // Connect to a SIID network
-bool connectToNetwork(){  
+bool connectToNetwork(){
   WiFi.mode(WIFI_STA);
   //WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE); // call is only a workaround for bug in WiFi class
   WiFi.setHostname(conf["host_name"].c_str());
-  String st_ssid =""; 
+  String st_ssid ="";
   String st_pass="";
   String st_ip="";
-  for (int i = 1; i < MAX_SSID_ARR_NO + 1; i++){    
+  for (int i = 1; i < MAX_SSID_ARR_NO + 1; i++){
     st_ssid = conf["st_ssid" + String(i)];
     if(st_ssid=="") continue;
     st_pass = conf["st_pass" + String(i)];
-    
+
     //Set static ip if defined
     st_ip = conf["st_ip" + String(i)];
-    setStaticIP(st_ip);  
+    setStaticIP(st_ip);
 
     //Wifi down, reconnect here
     LOG_I("Wifi ST connecting to: %s, %s \n",st_ssid.c_str(), st_pass.c_str());
     //LOG_I("Wifi ST connecting to: %s\n",st_ssid.c_str());
-    WiFi.begin(st_ssid.c_str(), st_pass.c_str());      
+    WiFi.begin(st_ssid.c_str(), st_pass.c_str());
     int col = 0;
-    uint32_t startAttemptTime = millis();      
+    uint32_t startAttemptTime = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < CONNECT_TIMEOUT)  {
       Serial.printf(".");
-      if (++col >= 60){ // just keep terminal from scrolling sideways        
+      if (++col >= 60){ // just keep terminal from scrolling sideways
         col = 0;
         Serial.printf("\n");
-      }        
+      }
       Serial.flush();
-      delay(500);    
+      delay(500);
     }
     Serial.printf("\n");
     if(WiFi.status() == WL_CONNECTED) break;
   }
-  
+
   if (WiFi.status() != WL_CONNECTED){
     LOG_E("Wifi connect fail\n");
     WiFi.disconnect();
     return false;
   }else{
-    LOG_I("Wifi AP SSID: %s connected, use 'http://%s' to connect\n", st_ssid.c_str(), WiFi.localIP().toString().c_str()); 
+    LOG_I("Wifi AP SSID: %s connected, use 'http://%s' to connect\n", st_ssid.c_str(), WiFi.localIP().toString().c_str());
   }
   return true;
 }
@@ -170,14 +170,14 @@ String getLineHtml(JsonPair kv){
   return line;
 }
 // Handler function for AP config form
-static void handleAssistRoot() { 
+static void handleAssistRoot() {
   ResetCountdownTimer("configEdit");
-  conf.handleFormRequest(pServer); 
+  conf.handleFormRequest(pServer);
   if(pServer->args() == 0)
     pServer->sendContent(String(HTML_PING_SCRIPT));
 }
 
-// Handler function for root of the web page 
+// Handler function for root of the web page
 static void handleRoot(){
   //Read on each refresh
   //readSensors();
@@ -185,17 +185,17 @@ static void handleRoot(){
   DeserializationError error;
   DynamicJsonDocument doc(1024);
   //Parse json data
-  error = deserializeJson(doc, jsonBuff.c_str());  
-  if (error) { 
+  error = deserializeJson(doc, jsonBuff.c_str());
+  if (error) {
     LOG_E("Deserialize Json failed: %s\n", error.c_str());
     return;
   }
   JsonObject root = doc.as<JsonObject>();
   String out(HTML_PAGE_HOME_START);
-  
+
   out.replace("{page_title}","Sensors of "+ conf["host_name"]);
   out.replace("{plant_name}",conf["plant_name"]);
-  
+
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   pServer->sendContent(out);
   pServer->sendContent(conf.getCSS());
@@ -231,10 +231,10 @@ static void handleRoot(){
     btView.replace("{log}", LOGGER_LOG_FILENAME);
     btReset.replace("{log}", LOGGER_LOG_FILENAME);
     end.replace("<!--Custom-->", "<br>\n" + btView + "\n" + btReset);
-  }  
+  }
   pServer->sendContent(end);
   //pServer->sendContent(HTML_PING_SCRIPT);
-  pServer->client().flush(); 
+  pServer->client().flush();
   ResetCountdownTimer("Handle root");
 }
 
@@ -246,10 +246,10 @@ static void handleViewFile(String fileName, bool download=false){
     const char* resp_str = "File does not exist or cannot be opened";
     LOG_E("%s: %s", resp_str, fileName.c_str());
     pServer->send(200, "text/html", resp_str);
-    pServer->client().flush(); 
-    return;  
+    pServer->client().flush();
+    return;
   }
-  if (download) {  
+  if (download) {
     // download file as attachment, required file name in inFileName
     LOG_I("Download file: %s, size: %0.1f K", fileName.c_str(), (float)(f.size()/(1024)));
     pServer->sendHeader("Content-Type", "text/text");
@@ -260,8 +260,8 @@ static void handleViewFile(String fileName, bool download=false){
     pServer->sendHeader("Connection", "close");
     size_t sz = pServer->streamFile(f, "application/octet-stream");
     if (sz != f.size()) {
-      LOG_E("File: %s, Sent %lu, expected: %lu!\n", fileName.c_str(), sz, f.size()); 
-    } 
+      LOG_E("File: %s, Sent %lu, expected: %lu!\n", fileName.c_str(), sz, f.size());
+    }
     f.close();
     return;
   }
@@ -271,21 +271,21 @@ static void handleViewFile(String fileName, bool download=false){
   byte chunk[CHUNKSIZE];
   size_t chunksize;
   do {
-    chunksize = f.read(chunk, CHUNKSIZE); 
+    chunksize = f.read(chunk, CHUNKSIZE);
     pServer->sendContent((char *)chunk, chunksize);
   } while (chunksize != 0);
-  f.close();  
-  pServer->client().flush(); 
+  f.close();
+  pServer->client().flush();
 }
 
 // Handler function for commands from the main web page
 static void handleCmd(){
-  //WebServer::args() ignores empty parameters 
+  //WebServer::args() ignores empty parameters
   for (int i = 0; i < pServer->args(); i++) {
     LOG_D("Cmds received: [%i] %s, %s \n",i, pServer->argName(i), pServer->arg(i).c_str()  );
     String out(conf.getMessageHtml());
     out.replace("{refresh}", "3000");
-    String cmd(pServer->argName(i));    
+    String cmd(pServer->argName(i));
     if(cmd=="del" || cmd=="rm"){
       String file(pServer->arg(i));
       if(STORAGE.remove(file.c_str())){
@@ -300,7 +300,7 @@ static void handleCmd(){
       pServer->send(200, "text/html", out);
       return;
     }
-    
+
     out.replace("{url}", "/");
     if(cmd=="ls"){
       String dir(DATA_DIR);
@@ -310,15 +310,15 @@ static void handleCmd(){
       }
       std::vector<String> dirArr;               //Directory array
       std::vector<std::vector<String>> fileArr; //Files array
-  
+
       listSortedDir(dir, dirArr, fileArr );
       size_t row = 0;
-      while (row++ < dirArr.size()) { 
-        String d = dirArr[row - 1];   
+      while (row++ < dirArr.size()) {
+        String d = dirArr[row - 1];
         pServer->sendContent("[" + d + "]\n");
       }
       row = 0;
-      while (row++ < fileArr.size()) { 
+      while (row++ < fileArr.size()) {
         String f = fileArr[row - 1][0];
         String s = fileArr[row - 1][1];
         pServer->sendContent(f + "\t" + s + "\n");
@@ -340,12 +340,12 @@ static void handleCmd(){
       out.replace("{msg}", "Rebooting ESP..<br>Please wait");
       out.replace("{title}", "Reboot");
       pServer->send(200, "text/html", out);
-      pServer->client().flush(); 
+      pServer->client().flush();
       delay(1000);
       ESP.restart();
       return;
     }else if(cmd=="hasDiscovery"){
-      mqttSetupDevice(getChipID()); 
+      mqttSetupDevice(getChipID());
       out.replace("{msg}", "Sended mqtt homeassistant device discovery");
       out.replace("{title}", "Homeassistant discovery");
     }else if(cmd=="reset"){
@@ -361,9 +361,9 @@ static void handleCmd(){
       out.replace("{msg}", "Unknown command:" + cmd);
     }
     pServer->send(200, "text/html", out);
-  } 
+  }
   pServer->send(200, "text/html", "");
-  pServer->client().flush(); 
+  pServer->client().flush();
   ResetCountdownTimer("Handle cmd");
 }
 
@@ -375,7 +375,7 @@ static void handlePing(){
 
 // Handler function for ping from the web page to avoid sleep
 static void handleFavIcon(){
-  pServer->send(200, "text/html", "");  
+  pServer->send(200, "text/html", "");
 }
 
 // Handler function to list file sytem.
@@ -387,7 +387,7 @@ static void handleFileSytem(){
   }
   std::vector<String> dirArr;               //Directory array
   std::vector<std::vector<String>> fileArr; //Files array
-  
+
   listSortedDir(dir, dirArr, fileArr );
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
 
@@ -402,27 +402,27 @@ static void handleFileSytem(){
   pServer->sendContent(out);
   out = "<table>";
   size_t row = 0;
-  while (row++ < dirArr.size()) { 
-    String d = dirArr[row - 1];    
+  while (row++ < dirArr.size()) {
+    String d = dirArr[row - 1];
     if(row==1){
       String up = d.substring( 0, d.lastIndexOf("/") );
       if(up != "" && up != dir){
         out += "<tr><td colspan='5'><a href='/fs?dir=" + up + "'><b>[ .. ]</b></a></td>";
         out += "</tr>\n";
-      } 
+      }
     }
     if(d!=dir){
       out += "<tr><td><a href='/fs?dir=" + d + "'>" + String(HTML_PAGE_SVG_FOLDER) + "</a></td>";
       out += "<td style='text-align: left;'><a href='/fs?dir=" + d + "'><b> " + d + "</b></a></td></tr>\n";
-      
-    } 
+
+    }
     pServer->sendContent(out);
     out = "";
   }
   out = "</table>";
   pServer->sendContent(out);
   row=0;
-  while (row++ < fileArr.size()) { 
+  while (row++ < fileArr.size()) {
     String f = fileArr[row - 1][0];
     String s = fileArr[row - 1][1];
     out="";
@@ -436,20 +436,20 @@ static void handleFileSytem(){
   }
   out = "</table></br>";
   if(dir == DATA_DIR)
-    out += "</br>" + String(HTML_HOME_BUTTON);  
-  else 
-    out += "</br>" + String(HTML_BACK_BUTTON);  
+    out += "</br>" + String(HTML_HOME_BUTTON);
+  else
+    out += "</br>" + String(HTML_BACK_BUTTON);
   pServer->sendContent(out);
   out = "</br></br>";
-  
+
   size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
-  out += "<small>Total space: " + String(STORAGE.totalBytes() / 1024) + " K, ";  
-  out += "Used: " + String(STORAGE.usedBytes() / 1024) + " K, ";  
-  out += "Free: " + String(free / 1024) + " K</small></br>";  
+  out += "<small>Total space: " + String(STORAGE.totalBytes() / 1024) + " K, ";
+  out += "Used: " + String(STORAGE.usedBytes() / 1024) + " K, ";
+  out += "Free: " + String(free / 1024) + " K</small></br>";
   out += "" + String(HTML_PING_SCRIPT);
   pServer->sendContent(out);
   pServer->sendContent(HTML_PAGE_SIMPLE_BODY_END);
-  pServer->client().flush(); 
+  pServer->client().flush();
 }
 
 static void handleCharts(){
@@ -458,8 +458,8 @@ static void handleCharts(){
   pServer->sendContent(out);
   pServer->sendContent(HTML_CHARTS_CSS);
   pServer->sendContent("<script>" + String(HTML_CHARTS_SCRIPT) + "</script>");
-  pServer->sendContent("<script>" + String(HTML_CHARTS_MAIN_SCRIPT) + "</script>");  
-  pServer->sendContent(HTML_CHARTS_BODY);    
+  pServer->sendContent("<script>" + String(HTML_CHARTS_MAIN_SCRIPT) + "</script>");
+  pServer->sendContent(HTML_CHARTS_BODY);
   pServer->sendContent(HTML_PING_SCRIPT);
 }
 
@@ -492,7 +492,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
             // send message to client
             // webSocket.sendBIN(num, payload, length);
             break;
-		case WStype_ERROR:			
+		case WStype_ERROR:
 		case WStype_FRAGMENT_TEXT_START:
 		case WStype_FRAGMENT_BIN_START:
 		case WStype_FRAGMENT:
@@ -537,7 +537,7 @@ void registerHandlers(){
     pServer->on("/cfg", handleAssistRoot );
     //pServer->on("/scan", handleAssistScan );
     conf.setup(*pServer);
-  }  
+  }
   pServer->on("/pg", handlePing);
   pServer->on("/fs", handleFileSytem);
   pServer->on("/chrt", handleCharts);
@@ -551,13 +551,13 @@ void startWebSockets(){
   pWebSocket = new WebSocketsServer(81);
   pWebSocket->begin();
   pWebSocket->onEvent(webSocketEvent);
-  LOG_I("Started web sockets at port: 81\n");  
+  LOG_I("Started web sockets at port: 81\n");
 }
 
 // Start the web server
 void startWebSever(){
   if(pServer) return;
-  if (MDNS.begin(conf["host_name"].c_str()))  
+  if (MDNS.begin(conf["host_name"].c_str()))
     LOG_I("MDNS responder Started\n");
   pServer = new WebServer(80);
   pServer->begin();
@@ -568,18 +568,18 @@ void startWebSever(){
   startWebSockets();
 }
 // Start Access point server and edit config
-void startAP(){    
+void startAP(){
     pServer = new WebServer(80);
     //Start AP and register configAssist handlers
     conf.setup(*pServer, true);
     apStarted = true;
-    
+
     //Register app webserver handlers
     registerHandlers();
-    
+
     //Start websockets
     startWebSockets();
-    
+
     ResetCountdownTimer("AP start");
-    initSensors();   
+    initSensors();
 }
