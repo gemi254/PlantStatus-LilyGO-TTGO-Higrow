@@ -51,7 +51,7 @@ bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<std:
     LOG_E("Failed to open dir: %s\n", dirName.c_str());
     return "";
   }
-  
+
   File file = root.openNextFile();
   String oPath = "";
   while (file) {
@@ -64,9 +64,9 @@ bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<std:
       dirArr.push_back(dirPath);
     }
     String subDir = filePath.substring( 0, filePath.lastIndexOf("/") );
-    LOG_D("List Dir: %s, sub Dir: %s  file: %s, sz: %lu\n", 
+    LOG_D("List Dir: %s, sub Dir: %s  file: %s, sz: %lu\n",
       dirPath.c_str(), subDir.c_str(), fileName.c_str(), file.size());
-    
+
     if(dirName == subDir)
       fileArr.push_back( {fileName, String(float(file.size()/1024),0)} );
 
@@ -75,7 +75,7 @@ bool listSortedDir(String dirName, std::vector<String> &dirArr, std::vector<std:
   std::sort(dirArr.begin(), dirArr.end(), [] (
     const String &a, const String &b) {
     return a > b;}
-  );  
+  );
   dirArr.erase(std::unique(dirArr.begin(), dirArr.end()), dirArr.end());
 
   std::sort(fileArr.begin(), fileArr.end(), [] (
@@ -93,7 +93,7 @@ String getOldestDir(String dirName){
     LOG_E("Failed to open dir: %s\n", dirName.c_str());
     return "";
   }
-  
+
   File file = root.openNextFile();
   std::vector<String> dirArr;
 
@@ -107,7 +107,7 @@ String getOldestDir(String dirName){
       oPath = dirPath;
       LOG_D("dir: %s, file: %s\n", dirPath.c_str(), fileName.c_str());
       dirArr.push_back(dirPath);
-    }   
+    }
     file = root.openNextFile();
   }
   std::sort(dirArr.begin(), dirArr.end(), [] (
@@ -127,7 +127,7 @@ void removeFolder(String dirName){
     LOG_E("Failed to open dir: %s\n", dirName.c_str());
     return;
   }
-  
+
   File file = root.openNextFile();
   while (file) {
     String filePath = file.path();
@@ -148,7 +148,7 @@ void checkLogRotate(){
   LOG_I("Storage, free: %lu K\n", (free/1024));
   if(free < MIN_STORAGE_SPACE){
     LOG_W("Storage is running low, free: %lu\n", free);
-    String oldestDir = getOldestDir(DATA_DIR);    
+    String oldestDir = getOldestDir(DATA_DIR);
     removeFolder(oldestDir);
   }
 }
