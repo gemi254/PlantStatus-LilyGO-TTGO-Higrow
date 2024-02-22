@@ -7,22 +7,22 @@ const char* VARIABLES_DEF_YAML PROGMEM = R"~(
 Wifi settings:
   - st_ssid1:
       label: Name for WLAN to connect
-      default: mdk3
+      default:
   - st_pass1:
       label: Password for WLAN
-      default: 2843028858
+      default:
   - st_ip1:
       label: Enter a Static ip setup (ip mask gateway) (192.168.4.2 255.255.255.0 192.168.1.1)
-      default: 
+      default:
   - st_ssid2:
       label: Name for WLAN
-      default: 
+      default:
   - st_pass2:
       label: Password for WLAN
-      default: 
+      default:
   - st_ip2:
       label: Enter a Static ip setup (ip mask gateway) (192.168.4.2 255.255.255.0 192.168.1.1)
-      default: 
+      default:
 
 Device settings:
   - host_name:
@@ -34,11 +34,11 @@ Device settings:
   - dht_type:
       label: Can be DHT11, DHT12, DHT22 or BME280
       options: >-
-        - BMP280
-        - DHT12
-        - DHT21
-        - DHT22
-      default: BME280
+        - BMP280: BMP280
+        - DHT11: 11
+        - DHT21: 21
+        - DHT22: 22
+      default: 11
   - logFile:
       label: Check to enable logging into a text file
       checked: False
@@ -89,16 +89,16 @@ Sensors offsets:
 Mosquitto broker:
   - mqtt_broker:
       label: Mosquitto broker (Ip or hostname)
-      default: 
+      default:
   - mqtt_port:
       label: Mosquitto broker port (1883)
-      default: 
+      default:
   - mqtt_user:
       label: Mosquitto broker user
-      default: 
+      default:
   - mqtt_pass:
       label: Mosquitto broker password
-      default: 
+      default:
   - mqtt_topic_prefix:
       label: Mosquitto topic path prefix
       default: homeassistant/sensor/
