@@ -68,7 +68,7 @@ PROGMEM const char HTML_PAGE_SVG_FLOWER[] = R"=====(
 )=====";
 
 // Template for header, begin of the config form
-PROGMEM const char HTML_PAGE_HOME_START[] = 
+PROGMEM const char HTML_PAGE_HOME_START[] =
 R"=====(<!DOCTYPE HTML>
 <html lang='en'>
 <head>
@@ -76,7 +76,7 @@ R"=====(<!DOCTYPE HTML>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{page_title}</title>)=====";
 
-PROGMEM const char HTML_PAGE_HOME_CSS[] = 
+PROGMEM const char HTML_PAGE_HOME_CSS[] =
 R"=====(
 <style>
 :root {
@@ -136,15 +136,15 @@ document.addEventListener('DOMContentLoaded', initWebSocket());
 // close web socket on leaving page
 window.addEventListener('beforeunload', function (event) {
      if (ws) closeWS();
-}); 
+});
 
 // define websocket handling
-function initWebSocket() {  
+function initWebSocket() {
   console.log("Connect to: " + wsServer);
   ws = new WebSocket(wsServer);
   ws.onopen = onOpen;
   ws.onclose = onClose;
-  ws.onmessage = onMessage; 
+  ws.onmessage = onMessage;
   ws.onerror = onError;
 }
 async function closeWS() {
@@ -189,7 +189,7 @@ function onMessage(messageEvent) {
 }
 
 function updateTable(configData){
-  Object.entries(configData).forEach(([key, value]) => {    
+  Object.entries(configData).forEach(([key, value]) => {
     const td = document.getElementById(key)
     if(td){
       if(key!="time" && key!="batChargeDate" && key!="onPower" && key!="sleepReason"){
@@ -199,7 +199,7 @@ function updateTable(configData){
         else { inc.style.color="lightcoral"; inc.innerHTML = "▼"; }
       }
       td.innerHTML = value;
-    } 
+    }
   });
 }
 
@@ -264,11 +264,11 @@ PROGMEM const char HTML_PAGE_HOME_LINE[] = R"=====(
 
 //Seperator
 PROGMEM const char HTML_PAGE_HOME_SEP[] = R"=====(
-        </table> 
+        </table>
       </div>
       <div class="card closed" onClick="this.classList.toggle('closed')">
         <h2>Device Information</h2>
-        <table>     
+        <table>
 )=====";
 PROGMEM const char HTML_PAGE_HOME_BUTTON_VIEWLOG[] = R"=====(
   <button title='View debug log' onClick="window.open('/cmd?view={log}', '_blank');">View log</button>
