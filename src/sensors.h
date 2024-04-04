@@ -6,14 +6,15 @@ bool initDHTsensor(){
   int i = 5;
   while (i--) {
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    //float t = pDht->readTemperature(false);
     float h = pDht->readHumidity();
-    //float t = pDht->readTemperature(false,true);
     if (isnan(h)) {
       LOG_E("Failed to read from DHT sensor!\n");
       // Wait a few seconds between measurements.
       delay(500);
     }else{
-      LOG_E("Probe DHT sensor h: %3.1f\n", h);
+      LOG_E("Probe DHT sensor h: %3.1f",h);
+      //LOG_E("Probe DHT sensor t: %3.1f, h: %3.1f\n",t, h);
       return true;
     }
   }
