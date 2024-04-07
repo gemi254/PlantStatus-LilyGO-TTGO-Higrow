@@ -197,7 +197,7 @@ String getJsonBuff(){
   plant["temp"] = truncateFloat(data.temp + atof(conf["offs_temp"].c_str()), 1);
   plant["humid"] = truncateFloat(data.humid + atof(conf["offs_humid"].c_str()), 1);
   if(conf["dht_type"]=="BMP280")
-    plant["pressure"] = truncateFloat(data.pressure + atof(conf["offs_pressure"].c_str()), 1);
+    plant["press"] = truncateFloat(data.pressure + atof(conf["offs_pressure"].c_str()), 1);
   plant["soil"] = (data.soil + conf["offs_soil"].toInt());
   plant["salt"] = (data.salt + conf["offs_salt"].toInt());
   // plant["soilTemp"] = config.soilTemp;
