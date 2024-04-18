@@ -1,6 +1,6 @@
 bool initDHTsensor(){
   uint8_t dht_type = conf["dht_type"].toInt();
-  LOG_I("Init DHT sensor on pin: %i, type: %i\n",DHT_PIN, dht_type);
+  LOG_D("Init DHT sensor on pin: %i, type: %i\n",DHT_PIN, dht_type);
   pDht = new DHT(DHT_PIN, dht_type);
   pDht->begin();
   int i = 5;
@@ -13,7 +13,7 @@ bool initDHTsensor(){
       // Wait a few seconds between measurements.
       delay(500);
     }else{
-      LOG_E("Probe DHT sensor h: %3.1f",h);
+      LOG_D("Probe DHT sensor h: %3.1f\n",h);
       //LOG_E("Probe DHT sensor t: %3.1f, h: %3.1f\n",t, h);
       return true;
     }
@@ -60,39 +60,37 @@ bool initSensors(){
 
 // READ Salt
 uint32_t readSalt(){
-  uint8_t samples = 120;
-  uint32_t humi = 0;
-  uint16_t array[120];
-
-  for (int i = 0; i < samples; i++)
-  {
-    array[i] = analogRead(SALT_PIN);
-    delay(2);
-  }
-  std::sort(array, array + samples);
-  for (int i = 0; i < samples; i++)
-  {
-    if (i == 0 || i == samples - 1)
-      continue;
-    humi += array[i];
-  }
-  humi /= samples - 2;
-  LOG_D("Read salt: %lu\n", humi);
-  return humi;
+  uint32_t salt = analogReadAvg(SALT_PIN, SALT_NO_OF_SAMPLES);
+  LOG_D("Read salt: %lu\n", salt);
+  return salt;
 }
 
-// Read and calibrate Soil
-uint8_t readSoil(){
-  uint32_t adc_reading = 0;
-  for (int i = 0; i < SOIL_NO_OF_SAMPLES; i++) {
-      adc_reading += analogRead(SOIL_PIN);
-      delay(2);
+// Read and calibrate Soil moisture
+uint32_t readSoil(){
+
+  uint32_t soil = analogReadAvg(SOIL_PIN, SOIL_NO_OF_SAMPLES);
+
+  // Auto adjust min max
+  if(conf["auto_adjust_soil"].toInt()){
+    bool save = false;
+    if(soil < conf["soil_min"].toInt()){
+      conf.put("soil_min", soil);
+      LOG_I("Adjust soil min: %lu\n", soil);
+      save = true;
+    }
+    if(soil > conf["soil_max"].toInt()){
+      conf.put("soil_max", soil);
+      LOG_I("Adjust soil max: %lu\n", soil);
+      save = true;
+    }
+    if(save) conf.saveConfigFile();
+
   }
-  uint16_t soil = adc_reading / SOIL_NO_OF_SAMPLES;
   uint8_t soilM = map(soil, conf["soil_min"].toInt(), conf["soil_max"].toInt(), 100, 0);
   LOG_D("Read soil: %lu, map: %lu\n",soil ,soilM);
   return soilM;
 }
+
 
 float readSoilTemp(){
   float temp;
@@ -130,7 +128,7 @@ float readLightValue(){
           if (!lightMeter.setMTreg(MTreg)){
             LOG_E("Failed to set BH1750 mtreg: %i\n", MTreg);
           }else{
-            LOG_I("Adjusted BH1750 mtreg: %i\n", MTreg);
+            LOG_D("Adjusted BH1750 mtreg: %i\n", MTreg);
             lux = lightMeter.readLightLevel();
             delay(150);
           }
