@@ -1,16 +1,14 @@
 // Calc battery state. Higrow uses TP4054 linear charger
 uint32_t readBatteryADC(){
-  uint32_t adc_reading = 0;
-    for (int i = 0; i < BATT_NO_OF_SAMPLES; i++) {
-        adc_reading += analogRead(BAT_ADC);
-        delay(2);
-    }
-    adc_reading /= BATT_NO_OF_SAMPLES;
-    return adc_reading;
+  uint32_t adc_reading = analogReadAvg(BAT_ADC, BATT_NO_OF_SAMPLES);
+  return adc_reading;
 }
 
 float calcBattery(uint16_t AdcVolt){
   data.batAdcVolt = AdcVolt;
+  // TP4054 Standalone Linear Li-lon Battery Charger
+  // Preset 4.2V Charge Voltage with 1% Accuracy
+  // 2.9V Trickle Charge Threshold
 
   // Battery adc volt measured with multimetr, after disconecting from board,
   // and value reported at end discharge, and value reported just after charging
@@ -74,8 +72,12 @@ float calcBatteryDays(){
         if(daysOnBattery < 0.0F)  daysOnBattery = 0.0F;
       }
       //LOG_I("Battery DISCHARGING, st: %lu, now: %lu\n", tmStart, tmNow);
+    }else{ //Bat file not exists
+      File f = STORAGE.open(LAST_BAT_INI, "w");
+      f.print(getCurDateTimeString());
+      f.close();
     }
-    LOG_I("Battery DISCHARGING, date: %s, days: %5.3f\n", data.batChargeDate.c_str(), daysOnBattery);
+    LOG_D("Battery DISCHARGING, date: %s, days: %5.3f\n", data.batChargeDate.c_str(), daysOnBattery);
   }
 
   return daysOnBattery;
