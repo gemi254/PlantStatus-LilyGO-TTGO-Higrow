@@ -145,3 +145,20 @@ void reset(){
   STORAGE.remove(LAST_BAT_INI);
   conf.deleteConfig();
 }
+// Read analog average value (delete min max)
+uint32_t analogReadAvg(const uint8_t pin, const uint8_t samples = 8){
+  uint32_t val = 0;
+  uint16_t array[samples];
+  for (int i = 0; i < samples; i++){
+    array[i] = analogRead(pin);
+    delay(2);
+  }
+  std::sort(array, array + samples);
+  for (int i = 0; i < samples; i++){
+    if (i == 0 || i == samples - 1)
+      continue;
+    val += array[i];
+  }
+  val /= samples - 2;
+  return val;
+}
