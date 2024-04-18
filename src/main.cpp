@@ -20,6 +20,8 @@
 
 #define LOGGER_LOG_MODE  3       // External
 #define LOGGER_LOG_LEVEL 3       // Errors & Warnings & Info & Debug & Verbose
+#define DEBUG_BATTERY            // Uncomment to log bat adc values
+//#define DEBUG_MQTT             // Uncomment to debug mqtt
 bool logToFile = false;
 static File logFile;
 void _log_printf(const char *format, ...);
@@ -27,7 +29,7 @@ void _log_printf(const char *format, ...);
 #include <ConfigAssist.h>        //Config assist class
 #include "user-variables.h"
 
-#define APP_VER           "1.2.3"          // Update config assist && move to yaml config
+#define APP_VER           "1.2.4"     // Update config assist && move to yaml config
 #define LED_PIN           (13)
 #define I2C_SDA           (25)
 #define I2C_SCL           (26)
@@ -53,17 +55,16 @@ void _log_printf(const char *format, ...);
 
 #define BATT_NO_OF_SAMPLES     8     // Samples to read from BAT_ADC
 #define SOIL_NO_OF_SAMPLES     8     // Samples to read from SOIL_PIN
+#define SALT_NO_OF_SAMPLES     120   // Samples to read from SALT_PIN
 
-#define DEBUG_BATTERY              // Uncomment to log bat adc values
 #define BATT_CHARGE_DATE_DIVIDER (86400.0F)
-#define BATT_PERC_ONPOWER (110.0F)
+#define BATT_PERC_ONPOWER (105.0F)
 
 #define uS_TO_S_FACTOR 1000000ULL     // Conversion factor for micro seconds to seconds
 #define SLEEP_CHECK_INTERVAL   1000   // Check if it is time to sleep (millis)
 #define SLEEP_DELAY_INTERVAL   30000  // After this time with no activity go to sleep
-#define SENSORS_READ_INTERVAL  10000  // Sensors read inverval in milliseconds on loop mode, 30 sec
+#define SENSORS_READ_INTERVAL  5000  // Sensors read inverval in milliseconds on loop mode, 5 sec
 #define RESET_CONFIGS_INTERVAL 10000L // Interval press user button to factory defaults.
-#define TIME_SYNC_LOOPS  5            // Synchronize time every n loops
 
 // json sensors data
 struct SensorData
@@ -111,7 +112,6 @@ bool wifiConnected = false;        // Wifi connected
 bool apStarted = false;            // AP started
 bool clearMqttRetain = false;
 static String chipID;              // Wifi chipid
-static String topicsPrefix;        // Subscribe to topics
 static uint8_t apClients = 0;      // Connected ap clients
 
 bool wireOk = false;
@@ -227,7 +227,9 @@ void setup()
     return;
   }
   //Synchronize time if needed or every n loops
-  if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % TIME_SYNC_LOOPS ){
+  int syncLoops = lastBoot["time_sync_loops"].toInt();
+  if(syncLoops == 0 ) syncLoops = 1;
+  if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % syncLoops){
     if(wifiConnected) syncTime();
     else if(getEpoch() > 10000) timeSynchronized = true;
   }else{
@@ -244,10 +246,13 @@ void setup()
   //Connect to mqtt broker
   mqttConnect();
   if(mqttClient.connected())  //Listen config commands
-    subscribeConfig();
+    subscribeCommands();
 
   //Start web server on long button press or on power connected?
   btState = !digitalRead(USER_BUTTON);
+  #ifdef DEBUG_MQTT
+  btState = true;
+  #endif
   if(btState){
     startWebSever();
     ResetCountdownTimer("Webserver start");
@@ -276,7 +281,7 @@ void loop(){
     wsSendSensors();
 
     //Publish JSON to mqtt
-    publishSensors(data);
+    publishSensors();
 
     //Remember last volt
     lastBoot.put("bat_voltage", String(data.batVolt, 2),true);
