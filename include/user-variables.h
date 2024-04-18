@@ -45,11 +45,14 @@ Device settings:
 
 Sensors calibration:
   - soil_min:
-      label: Soil Dry condition readings
-      default: 1535
+      label: Soil WET condition readings (1256)
+      default: 1391
   - soil_max:
-      label: Soil Wet condition readings
+      label: Soil DRY condition readings (3216)
       default: 3300
+  - auto_adjust_soil:
+      label: Auto adjust soil_max, soil_min values
+      checked: true
   - bat_reading_low:
       label: Empty battery volt measured after disconecting from board (2.92)
       default: 2.92
@@ -57,11 +60,11 @@ Sensors calibration:
       label: Full battery volt measured after charging and disconecting from board (4.19)
       default: 4.19
   - bat_adc_low:
-      label: Empty battery adc reading (1375)
-      default: 1375
+      label: Empty battery adc reading (1534)
+      default: 1534
   - bat_adc_high:
       label: Full battery vadc reading (float:2280 max: 2644)
-      default: 2280
+      default: 2590
 
 Sensors offsets:
   - offs_lux:
@@ -141,6 +144,9 @@ Other settings:
   - ntp_server:
       label: Time server to sync time
       default: 83.212.108.245
+  - time_sync_loops:
+      label: Synchronize time from ntp server every time_sync_loops
+      default: 5
   - sleep_time:
       label: Time to deep sleep after measurements (Seconds)
       default: 600
