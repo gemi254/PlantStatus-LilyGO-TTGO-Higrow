@@ -6,6 +6,7 @@
 .vscode/settings.json
 .vscode/ipch
 test/
+data/
 include/user-variables.local.h
 unpacked_fs/
 downloaded*
