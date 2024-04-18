@@ -89,7 +89,7 @@ bool setStaticIP(String st_ip){
     LOG_E("Error parsing static ip gw: %s\n",s.c_str());
     return false;
   }
-  LOG_I("Wifi ST setting static ip: %s, mask: %s  gw: %s \n", ip.toString().c_str(), mask.toString().c_str(), gw.toString().c_str());
+  LOG_D("Wifi ST setting static ip: %s, mask: %s  gw: %s \n", ip.toString().c_str(), mask.toString().c_str(), gw.toString().c_str());
   WiFi.config(ip, gw, mask);
   return true;
 }
@@ -139,8 +139,8 @@ bool connectToNetwork(){
   return true;
 }
 
-// Functions forward definition
-String getJsonBuff();
+// Functions forward definitions
+String getJsonBuff(const byte type = 0 );
 void mqttSetupDevice(String chipId);
 
 //Get one line html string
@@ -280,12 +280,15 @@ static void handleViewFile(String fileName, bool download=false){
 
 // Handler function for commands from the main web page
 static void handleCmd(){
-  //WebServer::args() ignores empty parameters
-  for (int i = 0; i < pServer->args(); i++) {
+
+  for (int i = 0; i < pServer->args(); i++) { // WebServer::args() ignores empty parameters
     LOG_D("Cmds received: [%i] %s, %s \n",i, pServer->argName(i), pServer->arg(i).c_str()  );
     String out(conf.getMessageHtml());
-    out.replace("{refresh}", "3000");
     String cmd(pServer->argName(i));
+
+    out.replace("{refresh}", "3000");
+    out.replace("{reboot}","false");
+
     if(cmd=="del" || cmd=="rm"){
       String file(pServer->arg(i));
       if(STORAGE.remove(file.c_str())){
@@ -362,8 +365,8 @@ static void handleCmd(){
     }
     pServer->send(200, "text/html", out);
   }
-  pServer->send(200, "text/html", "");
-  pServer->client().flush();
+  //pServer->send(200, "text/html", "");
+  //pServer->client().flush();
   ResetCountdownTimer("Handle cmd");
 }
 
@@ -542,7 +545,7 @@ void registerHandlers(){
   pServer->on("/fs", handleFileSytem);
   pServer->on("/chrt", handleCharts);
   pServer->on("/favicon.ico", handleFavIcon);
-  LOG_I("Registered web handlers\n");
+  LOG_D("Registered web handlers\n");
 }
 
 // Start the websocket server
@@ -558,7 +561,7 @@ void startWebSockets(){
 void startWebSever(){
   if(pServer) return;
   if (MDNS.begin(conf["host_name"].c_str()))
-    LOG_I("MDNS responder Started\n");
+    LOG_D("MDNS responder Started\n");
   pServer = new WebServer(80);
   pServer->begin();
   LOG_I("Started web server at port: 80\n");
