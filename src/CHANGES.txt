@@ -1,3 +1,4 @@
+APP_VER "1.2.4" // Home assistant discovery as a device. Auto adjust soil min max values
 APP_VER "1.2.3" // Updated ConfigAssist v2.8.2, Updated adafruit/DHT sensor library@1.4.6
 APP_VER "1.2.1" // Updated ConfigAssist v2.7.1
 APP_VER "1.2.0" // Delete log files & fix home link. Updated configAssist v 2.6.6
