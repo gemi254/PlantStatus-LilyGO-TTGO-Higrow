@@ -14,13 +14,13 @@ PROGMEM const char HTML_CHARTS_BODY[] = R"~(
 <body>
 <div class="container">
     <div id="chart_sel" style="text-align: center;">
-        <button type="button" onclick="changeMonth(+1)"><<</button>
-        <select id="months_list" name="months"></select>
-        <button type="button" onclick="changeMonth(-1)">>></button>
-        &nbsp;
         <button type="button" onclick="changeGraph(+1)"><<</button>
         <select id="charts_list" name="charts"></select>
         <button type="button" onclick="changeGraph(-1)">>></button>
+        &nbsp;
+        <button type="button" onclick="changeMonth(+1)"><<</button>
+        <select id="months_list" name="months"></select>
+        <button type="button" onclick="changeMonth(-1)">>></button>
     </div>
     <div id="charts"></div>
     <div id="charts_info"></div>
