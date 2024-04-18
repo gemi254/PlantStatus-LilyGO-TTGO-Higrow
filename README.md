@@ -51,8 +51,9 @@ To **re-configure** device press `configure` button from homepage end redirect t
 To make device visible in **Home Assistant** press the`Discovery` button from home page. Mqtt **auto discovery** messages will be send to **Home assistant** to configure **PlantStatus** as a mqtt device. Visit **HAS devices** page to see the new **T-HIGROW** MQTT device.
 
 <p align="center">
-  <img src="images/homeassistan_card.png">
+  <img src="images/homeassistant_logbook.png">
   <img src="images/homeassistant_device.png">
+  <img src="images/homeassistant_card.png">
   <br>
   Home Assistand Mqtt card & device
 </p>
@@ -121,7 +122,8 @@ After disconnecting your browser, **device** will automatically enter to **deep 
 </p>
 
 <p align="center">
-   PlantStatus config page
   <img src="images/PlantStatus_config.png">
+  <br>
+  PlantStatus config page
 </p>
 
