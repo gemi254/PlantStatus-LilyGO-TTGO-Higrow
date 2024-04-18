@@ -1,5 +1,76 @@
+#define QUOTE(val) String(F("\"")) + val + String(F("\""))
+#define JSON_TEMPLATE( key, val ) QUOTE(key) + F(": ") + (val)
 
+// Get mqtt base publish path + topic]
+String getMqttPath(const String &topic){
+    String topicStr = conf["mqtt_topic_prefix"];
+    if(!topicStr.endsWith("/")) topicStr += "/";
+    topicStr += conf["plant_name"]; // + "-" + getChipID();
+    return topicStr + topic;
+}
+// Connect to mqtt
+void mqttConnect(){
+  String broker = conf["mqtt_broker"];
+  if(broker.length()<1) return;
+  int port =  conf["mqtt_port"].toInt();
+  //Connect to mqtt broker
+  mqttClient.setServer(broker.c_str(), port);
+  bool con = mqttClient.connect(broker.c_str(), conf["mqtt_user"].c_str(), conf["mqtt_pass"].c_str());
+  if (!con) {
+    LOG_E("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
+    goToDeepSleep("mqttConnectFail");
+  }else{
+    LOG_I("Connecting to MQTT broker: %s:%i OK\n", broker, port);
+    if( !mqttClient.publish( getMqttPath(F("/lwt")).c_str(), "online", true) ) {
+      LOG_E("Failed to send lwt mqtt online message\n");
+    }
+  }
+}
+// Disconnect from mqtt
+void mqttDisconnect() {
+  if( !mqttClient.publish( getMqttPath(F("/lwt")).c_str(), "offline", true ) ) {
+    LOG_E("Failed to send lwt mqtt offline message\n");
+  }
+  mqttClient.unsubscribe(getMqttPath(F("/cmd")).c_str());
+  mqttClient.loop();
+  mqttClient.disconnect();
+  delay(50);
+}
+// Publish payload data to mqtt
+void mqttPublish(const char* topic, const char* payload, boolean retained){
+  if(WiFi.status() != WL_CONNECTED) return;
 
+  if(mqttClient.state() != MQTT_CONNECTED)
+    mqttConnect();
+
+  if(!mqttClient.connected())  return;
+
+ //Nice print of configuration mqtt message
+  #if defined(DEBUG_MQTT)
+      LOG_D("mqtt topic: %s\n", topic);
+      LOG_D("mqtt payload: %s\n", payload);
+  #endif
+
+  if( mqttClient.publish( topic, payload, retained ) ){
+    LOG_V("Message published\n");
+  } else {
+    LOG_E("Error in Message, not published\n");
+    goToDeepSleep("mqttPublishFailed");
+  }
+}
+
+// Reset retained messages recv
+void clearMqttRetainMsg(){
+  if(clearMqttRetain){
+
+    String topic = getMqttPath(F("/cmd"));
+    LOG_I("Clear mqtt retaining msg at: %s\n", topic.c_str());
+    mqttClient.publish(topic.c_str(), "", true);
+    mqttClient.loop();
+    //delay(1000);
+    clearMqttRetain = false;
+  }
+}
 // Handle Mqtt retain commands
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if(length==0) return;
@@ -87,95 +158,126 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
-// Reset retained messages recv
-void clearMqttRetainMsg(){
-  if(clearMqttRetain){
-    LOG_I("Clear mqtt retaining msgs\n");
-    String topic = topicsPrefix + "/config";
-    mqttClient.publish(topic.c_str(), "", true);
-    mqttClient.loop();
-    //delay(1000);
-    clearMqttRetain = false;
-  }
+// Get mqqtt json device
+String getMqttDevice(){
+    String jDev = F("{\n");
+    jDev += "    " +JSON_TEMPLATE(F("name"),  QUOTE(conf["plant_name"]) ) + F(",\n");
+    jDev += "    " +JSON_TEMPLATE(F("model"), QUOTE(conf["host_name"] + "-" + ESP.getChipModel()) ) + F(",\n");
+    jDev += "    " +JSON_TEMPLATE(F("connections"), "[[" + QUOTE("mac")  + ", " + QUOTE( WiFi.macAddress() )+ "]]") + F(",\n");
+    jDev += "    " +JSON_TEMPLATE(F("sw_version"), QUOTE(APP_VER)) + F(",\n");
+    jDev += "    " +JSON_TEMPLATE(F("identifiers"), "[" + QUOTE( ESP.getChipModel() + String("-") + ESP.getChipRevision()) + "]") + F(",\n");
+    jDev += "    " +JSON_TEMPLATE(F("configuration_url"), QUOTE("http://" + WiFi.localIP().toString() + "/")) + F(",\n");
+    jDev += "    " +JSON_TEMPLATE(F("manufacturer"), QUOTE(F("LilyGO")))+ F("\n");
+    jDev += "  }";
+    return jDev;
 }
 
 //Send mqtt autodiscovery messages
-void mqttSetup(String identyfikator, String chipId, String uom = "x", String dc = "x" )
+void mqttSetup(String field, String chipId, String uom = "x", String dc = "x", const String stateTopic = F("/sensors"))
 {
-  const String topicStr_c = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipId + "/" + identyfikator +"/config";
-  const char* topic_c = topicStr_c.c_str();
-
-  StaticJsonDocument<1536> doc_c;
+  const String topic = getMqttPath(String("/") + field + F("/config"));
+  StaticJsonDocument<1792> doc_c;
   JsonObject root = doc_c.to<JsonObject>();
-
-  root["name"] = conf["plant_name"] +" "+ identyfikator;
-
-  if ( dc != "x" ) {
-    root["device_class"] = dc;
-  }
-
-  root["unique_id"] = chipId +"-"+ identyfikator;
-  root["state_topic"] = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipId  + "/status";
-  root["value_template"] = "{{ value_json['" + identyfikator +"'] }}";
-  if ( uom != "x" ) {
+  root["name"] =  conf["plant_name"] +" "+ field;
+  root["unique_id"] = chipId +"-"+ field;
+  root["object_id"] = conf["host_name"] +" "+ field;
+  root["state_topic"] = getMqttPath(stateTopic);
+  root["value_template"] = "{{ value_json['" + field +"'] }}";
+  root["payload_not_available"] = "offline";
+  root["payload_available"] = "online";
+  root["state_class"] = "measurement";
+  if ( uom != "x" )
     root["unit_of_measurement"] = uom;
-  }
+  if ( dc != "x" )
+    root["device_class"] = dc;
+  if(stateTopic == F("/state"))
+    root["entity_category"] = F("diagnostic");
 
-  StaticJsonDocument<256> doc_c0;
-  JsonObject dev_root = doc_c0.to<JsonObject>();
-
-  dev_root["identifiers"] = chipId;
-  dev_root["manufacturer"] = "LILYGO";
-  dev_root["model"] = conf["host_name"];
-  dev_root["name"] = conf["plant_name"];
-  dev_root["sw_version"] = APP_VER;
-
-  root["dev"] = dev_root;
+  StaticJsonDocument<512> dev_root;
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(dev_root, getMqttDevice());
+  root["device"] = dev_root;
 
   //Send to mqtt
-  char buffer_c[1536];
+  char buffer_c[2048];
   serializeJson(doc_c, buffer_c);
+  bool retained = false;
 
-  //Nice print of configuration mqtt message
-  #if defined(DEBUG_MQTT)
-      Serial.println("*****************************************" );
-      Serial.println(topic_c);
-      Serial.print("Sending message to topic: \n");
-      serializeJsonPretty(doc_c, Serial);
-      Serial.println();
-  #endif
+  mqttPublish(topic.c_str(), buffer_c, retained);
 
-bool retained = true;
-
-if (mqttClient.publish(topic_c, buffer_c, retained)) {
-    LOG_D("Message published successfully\n");
-}else{
-    LOG_E("Error in Message, not published\n");
-    goToDeepSleep("mqttPublishFail");
-  }
 }
 
+// Home Assitant MQTT Config Diagnostics messages
+void mqttSetupConfigStatus(String chipId){
+  LOG_I("Setting homeassistant mqtt Config Status ..\n");
+  String field = "Status";
+  const String topic = getMqttPath("/" + field + F("/config")).c_str();
+
+  StaticJsonDocument<512> doc_c;
+  JsonObject root = doc_c.to<JsonObject>();
+
+  root["name"] = field;
+  root["unique_id"] = chipId +"-"+ field;
+  root["object_id"] = conf["host_name"] +" "+ field;
+  root["entity_category"] = "config";
+
+  root["icon"] = "mdi:check-network";
+  root["retain"] = "true";
+  root["command_topic"] = getMqttPath(F("/cmd"));
+  root["availability_topic"] = getMqttPath(F("/lwt"));
+  root["state_topic"] = getMqttPath(F("/lwt"));
+
+  StaticJsonDocument<256> dev_root;
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(dev_root, getMqttDevice());
+  root["device"] = dev_root;
+  //Send to mqtt
+  char buffer_c[512];
+  serializeJson(doc_c, buffer_c);
+
+  bool retained = true;
+  mqttPublish(topic.c_str(), buffer_c, retained);
+}
 // Home Assitant MQTT Autodiscovery messages
 // https://www.home-assistant.io/integrations/sensor/#device-class
 void mqttSetupDevice(String chipId){
-    Serial.println("Setting homeassistant mqtt device..");
+    mqttSetupConfigStatus(chipId);
+    LOG_D("Setting homeassistant mqtt device sensors..\n");
+
+    //Sensors fields
     mqttSetup("lux",            chipId, "lx", "illuminance");
     mqttSetup("humid",          chipId, "%",  "humidity");
     if(conf["dht_type"]=="BMP280")
-      mqttSetup("press",           chipId, "hPa",  "pressure");
-    mqttSetup("soil",           chipId, "%",  "humidity");
-    mqttSetup("salt",           chipId, "x");
+      mqttSetup("press",        chipId, "hPa","pressure");
+    mqttSetup("soil",           chipId, "%",  "moisture");
+    mqttSetup("salt",           chipId, "µS/cm");
     mqttSetup("temp",           chipId, "°C", "temperature");
-    mqttSetup("batPerc",        chipId, "%",  "battery");
-    mqttSetup("batDays",        chipId, "x",  "duration");
-    mqttSetup("batVolt",        chipId, "V",  "voltage");
-    mqttSetup("RSSI",           chipId, "dBm", "signal_strength");
+
+    // Status fields
+    mqttSetup("IpAddress",      chipId, "x",  "x", "/state");
+    mqttSetup("RSSI",           chipId, "dBm","signal_strength", "/state");
+    mqttSetup("batVolt",        chipId, "V",  "battery", "/state");
+    mqttSetup("batPerc",        chipId, "%",  "battery", "/state");
+    #ifdef DEBUG_BATTERY
+    mqttSetup("batChargeDate",  chipId, "x",  "date", "/state");
+    mqttSetup("batADC",         chipId, "x",  "x", "/state");
+    mqttSetup("onPower",        chipId, "x", "x", "/state");
+    #endif
+    mqttSetup("batDays",        chipId, "D",  "duration", "/state");
+    mqttSetup("batVolt",        chipId, "V",  "voltage", "/state");
+
+    mqttSetup("bootCount",      chipId, "x", "x", "/state");
+    mqttSetup("bootCountError", chipId, "x", "x", "/state");
+    mqttSetup("loopMillis",     chipId, "x", "x", "/state");
+    mqttSetup("sleepReason",    chipId, "x", "x", "/state");
+
+    mqttClient.publish( getMqttPath(F("/lwt")).c_str(), "online", true);
 }
 
+
 // Receive mqtt config commands
-void subscribeConfig(){
-  topicsPrefix = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipID;
-  const String topicConf = topicsPrefix + "/config";
+void subscribeCommands(){
+  const String topicConf = getMqttPath(F("/cmd"));
   //Subscribe to config topic
   mqttClient.setCallback(mqttCallback);
   mqttClient.subscribe(topicConf.c_str());
@@ -183,90 +285,68 @@ void subscribeConfig(){
 }
 
 // Get a json with sensors
-String getJsonBuff(){
+// 0 - All, 1 - Sensors, 2 - Diagnostics
+String getJsonBuff(const byte type ){
 
-  StaticJsonDocument<1536> doc;
+  StaticJsonDocument<1792> doc;
   //Set the values in the document according to SensorData
   JsonObject plant = doc.to<JsonObject>();
+  if(type == 0 || type == 1){
+    plant["sensorName"] = conf["plant_name"];
+    plant["time"] = data.time;
+    plant["lux"] = truncateFloat(data.lux + atof(conf["offs_lux"].c_str()), 1);
+    plant["temp"] = truncateFloat(data.temp + atof(conf["offs_temp"].c_str()), 1);
+    plant["humid"] = truncateFloat(data.humid + atof(conf["offs_humid"].c_str()), 1);
+    if(conf["dht_type"]=="BMP280")
+      plant["press"] = truncateFloat(data.pressure + atof(conf["offs_pressure"].c_str()), 1);
+    plant["soil"] = (data.soil + conf["offs_soil"].toInt());
+    plant["salt"] = (data.salt + conf["offs_salt"].toInt());
+    // plant["soilTemp"] = config.soilTemp;
+    // plant["saltadvice"] = config.saltadvice;
+    // plant["plantValveNo"] = plantValveNo;
+  }
 
-  plant["sensorName"] = conf["plant_name"];
-  //plant["deviceName"] = conf["host_name"];
-  //plant["chipId"] = chipID;
-  plant["time"] = data.time;
-  plant["lux"] = truncateFloat(data.lux + atof(conf["offs_lux"].c_str()), 1);
-  plant["temp"] = truncateFloat(data.temp + atof(conf["offs_temp"].c_str()), 1);
-  plant["humid"] = truncateFloat(data.humid + atof(conf["offs_humid"].c_str()), 1);
-  if(conf["dht_type"]=="BMP280")
-    plant["press"] = truncateFloat(data.pressure + atof(conf["offs_pressure"].c_str()), 1);
-  plant["soil"] = (data.soil + conf["offs_soil"].toInt());
-  plant["salt"] = (data.salt + conf["offs_salt"].toInt());
-  // plant["soilTemp"] = config.soilTemp;
-  // plant["saltadvice"] = config.saltadvice;
-  // plant["plantValveNo"] = plantValveNo;
-  // plant["wifissid"] = WiFi.SSID();
-  plant["batChargeDate"] = data.batChargeDate;
-  plant["batPerc"] = data.batPerc;
-#ifdef DEBUG_BATTERY
-  plant["batADC"] = data.batAdcVolt;
-#endif
-  plant["batVolt"] = truncateFloat(data.batVolt, 2);
-  plant["batDays"] = truncateFloat(data.batDays, 1);
-  //plant["batLastPerc"] = lastBoot["bat_perc"];
-  //plant["batPercAvg"] = percAvg;
-  //plant["batLastVolt"] = truncate( atof(lastBoot["bat_voltage"].c_str()), 2);
-  plant["onPower"] = onPower;
-  plant["bootCount"] = data.bootCnt;
-  plant["bootCountError"] = data.bootCntError;
-  plant["loopMillis"] = millis() - appStart;
-  plant["sleepReason"] = data.sleepReason;
-  plant["RSSI"] = WiFi.RSSI(); //wifiRSSI;
+  if(type == 0 || type == 2){
+    plant["batPerc"] = data.batPerc;
+    #ifdef DEBUG_BATTERY
+    plant["batChargeDate"] = data.batChargeDate;
+    plant["batADC"] = data.batAdcVolt;
+    plant["batVolt"] = truncateFloat(data.batVolt, 2);
+    plant["onPower"] = onPower;
+    #endif
+    plant["batDays"] = truncateFloat(data.batDays, 1);
+    /*
+    #ifdef _DEBUG_BATTERY
+    plant["batLastPerc"] = lastBoot["bat_perc"];
+    plant["batPercAvg"] = percAvg;
+    plant["batLastVolt"] = truncate( atof(lastBoot["bat_voltage"].c_str()), 2);
+    #endif*/
+    plant["bootCount"] = data.bootCnt;
+    plant["bootCountError"] = data.bootCntError;
+    plant["loopMillis"] = millis() - appStart;
+    plant["sleepReason"] = data.sleepReason;
+    plant["RSSI"] = WiFi.RSSI(); //wifiRSSI;
+    plant["IpAddress"] = WiFi.localIP().toString();
+  }
 
-  #if defined(DEBUG_MQTT)
-    serializeJsonPretty(doc, Serial);
-    Serial.println();
-  #endif
-  //Send to mqtt
-  char buffer[1536];
+  // Send to mqtt as string
+  char buffer[2048];
   serializeJson(doc, buffer);
   return String(buffer);
 }
-void mqttConnect(){
-  String broker = conf["mqtt_broker"];
-  if(broker.length()<1) return;
-  int port =  conf["mqtt_port"].toInt();
-  //Connect to mqtt broker
-  mqttClient.setServer(broker.c_str(), port);
-  bool con = mqttClient.connect(broker.c_str(), conf["mqtt_user"].c_str(), conf["mqtt_pass"].c_str());
-  if (!con) {
-    LOG_E("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
-    goToDeepSleep("mqttConnectFail");
-  }else{
-    LOG_I("Connecting to MQTT broker: %s:%i OK\n", broker, port);
-  }
-}
+
 // Publish sensors data to mqtt
-void publishSensors(const SensorData &data) {
-  if(WiFi.status() != WL_CONNECTED) return;
+void publishSensors() {
+  //Publish sensors
+  String topicS = getMqttPath(F("/sensors"));
+  String jsonBuff = getJsonBuff(1);
 
-  if(mqttClient.state() != MQTT_CONNECTED)
-    mqttConnect();
+  bool retained =  true;
+  mqttPublish(topicS.c_str(), jsonBuff.c_str(), retained );
 
-  if(!mqttClient.connected())  return;
-  //Publish status
-  topicsPrefix = conf["mqtt_topic_prefix"] + conf["plant_name"] + "-" + chipID;
-  const String topicStr =  topicsPrefix + "/status";
-  const char* topic = topicStr.c_str();
+  //Publish state
+  topicS = getMqttPath(F("/state"));
+  jsonBuff = getJsonBuff(2);
+  mqttPublish(topicS.c_str(), jsonBuff.c_str(), retained );
 
-  String jsonBuff = getJsonBuff();
-
-  LOG_D("Sending message to topic: %s\n",topic);
-  #if not defined(DEBUG_MQTT)
-    bool retained = true;
-    if (mqttClient.publish(topic, jsonBuff.c_str(), retained)) {
-      LOG_D("Message published\n");
-    } else {
-      LOG_E("Error in Message, not published\n");
-      goToDeepSleep("mqttPublishFailed");
-    }
-  #endif
 }
