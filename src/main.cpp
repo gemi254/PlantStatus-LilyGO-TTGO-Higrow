@@ -20,8 +20,8 @@
 
 #define LOGGER_LOG_MODE  3       // External
 #define LOGGER_LOG_LEVEL 3       // Errors & Warnings & Info & Debug & Verbose
-#define DEBUG_BATTERY            // Uncomment to log bat adc values
-//#define DEBUG_MQTT             // Uncomment to debug mqtt
+
+#define DEBUG_MODE               // Comment to enter production mode
 bool logToFile = false;
 static File logFile;
 void _log_printf(const char *format, ...);
@@ -48,7 +48,7 @@ void _log_printf(const char *format, ...);
 #define OB_BME280_ADDRESS (0x77)
 #define OB_SHT3X_ADDRESS  (0x44)
 
-#define LAST_BOOT_INI "/lastboot.ini"
+#define LAST_BOOT_INI  "/lastboot.ini"
 #define LAST_BAT_INI   "/batinf.ini"
 #define CONNECT_TIMEOUT 8000
 #define MAX_SSID_ARR_NO 2 // Maximum ssid json will describe
@@ -61,9 +61,9 @@ void _log_printf(const char *format, ...);
 #define BATT_PERC_ONPOWER (105.0F)
 
 #define uS_TO_S_FACTOR 1000000ULL     // Conversion factor for micro seconds to seconds
-#define SLEEP_CHECK_INTERVAL   1000   // Check if it is time to sleep (millis)
+#define SLEEP_CHECK_INTERVAL   500    // Check if it is time to sleep (millis)
 #define SLEEP_DELAY_INTERVAL   30000  // After this time with no activity go to sleep
-#define SENSORS_READ_INTERVAL  5000  // Sensors read inverval in milliseconds on loop mode, 5 sec
+#define SENSORS_READ_INTERVAL  5000   // Sensors read inverval in milliseconds on loop mode, 5 sec
 #define RESET_CONFIGS_INTERVAL 10000L // Interval press user button to factory defaults.
 
 // json sensors data
@@ -73,6 +73,7 @@ struct SensorData
   int bootCnt;
   int bootCntError;
   String sleepReason;
+  String lastError;
   float lux;
   float temp;
   float humid;
@@ -99,18 +100,19 @@ RTC_DATA_ATTR int bootCntError = 0;
 uint16_t adcVolt = 0;
 
 // Timers
-unsigned long sleepTimerCountdown = 2000; // Going to sleep timer
-unsigned long sensorReadMs = millis() + SENSORS_READ_INTERVAL;    // Sensors read inteval
-unsigned long sleepCheckMs = millis();    // Check for sleep interval
-unsigned long btPressMs = 0;              // Button pressed ms
+unsigned long sleepTimerCountdown = 0; // Going to sleep timer
+unsigned long sensorReadMs        = 0; // Sensors read inteval
+unsigned long sensorLogMs         = 0; // Sensors log inteval
+unsigned long sleepCheckMs        = 0; // Check for sleep interval
+unsigned long btPressMs           = 0; // Button pressed ms
 
 // Bool vars
 bool bmeFound = false;
 bool dhtFound = false;
-bool onPower = false;              // Is battery is charging
+bool onPower = false;              // Is battery charging
 bool wifiConnected = false;        // Wifi connected
 bool apStarted = false;            // AP started
-bool clearMqttRetain = false;
+bool clearMqttRetain = false;      // Clean retain messages
 static String chipID;              // Wifi chipid
 static uint8_t apClients = 0;      // Connected ap clients
 
@@ -189,7 +191,7 @@ void setup()
   //Enable configAssist logPrint to file
   logToFile = conf["logFile"].toInt();
   //Failed to load config or ssid empty
-  if(!conf.valid() || conf["st_ssid1"]==""){
+  if(!conf.confExists() || conf["st_ssid1"]==""){
     startAP();
     return;
   }
@@ -208,7 +210,7 @@ void setup()
   //listDir("/", 3);
   checkLogRotate();
 
-  //Load last boot ini file
+  //Remove last boot ini file
   //STORAGE.remove(LAST_BOOT_INI);
 
   if(!lastBoot.valid()){
@@ -227,9 +229,10 @@ void setup()
     return;
   }
   //Synchronize time if needed or every n loops
-  int syncLoops = lastBoot["time_sync_loops"].toInt();
+  int syncLoops = conf["time_sync_loops"].toInt();
   if(syncLoops == 0 ) syncLoops = 1;
-  if(getEpoch() <= 10000 || lastBoot["boot_cnt"].toInt() % syncLoops){
+  if(getEpoch() <= 10000 || (lastBoot["boot_cnt"].toInt() % syncLoops == 0) ){
+    LOG_V("Sync time: %u, syncLoops: %i\n",getEpoch(), lastBoot["boot_cnt"].toInt() % syncLoops);
     if(wifiConnected) syncTime();
     else if(getEpoch() > 10000) timeSynchronized = true;
   }else{
@@ -239,6 +242,11 @@ void setup()
   //Wire can not be initialized at beginng, the bus is busy
   if(!initSensors())
     goToDeepSleep("initFail");
+
+  // Setup timers
+  sensorLogMs = millis() + conf["sleep_time"].toInt() * 1000;
+  sensorReadMs = millis() + SENSORS_READ_INTERVAL;
+  sleepCheckMs = millis() + SLEEP_CHECK_INTERVAL;
 
   //Log sensors and go to sleep
   if(!wifiConnected) return;
@@ -272,10 +280,13 @@ void loop(){
     //Read sensor values,
     readSensors();
 
-    //Append to log
-    logSensors();
-
-    if(!apStarted && !wifiConnected) goToDeepSleep("notConnected");
+    //Append log line on sleep_time interval
+    if( millis() - sensorLogMs >= conf["sleep_time"].toInt() * 1000){
+      logSensors();
+      sensorLogMs =  millis();
+    }
+    //LOG_D("loop. apStarted: %i, wifiConnected: %i\n",apStarted, wifiConnected);
+    if(!apStarted && !wifiConnected) goToDeepSleep("conFail");
 
     //Send measurement to web sockets to update page
     wsSendSensors();
