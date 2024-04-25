@@ -92,6 +92,7 @@ Sensors offsets:
 Mosquitto broker:
   - mqtt_broker:
       label: Mosquitto broker (Ip or hostname)
+        Leave blank to disable
       default:
   - mqtt_port:
       label: Mosquitto broker port (1883)
