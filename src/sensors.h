@@ -206,6 +206,7 @@ void readSensors(){
   data.bootCnt = lastBoot["boot_cnt"].toInt();
   data.bootCntError = lastBoot["boot_cnt_err"].toInt();
   data.sleepReason = lastBoot["sleep_reason"];
+  data.lastError = (lastBoot["last_error"]=="") ? "none" : lastBoot["last_error"];
 
   //Next auto reading reset
   sensorReadMs = millis();
@@ -234,11 +235,12 @@ void logSensors(){
     line += "DateTime               " + sep;
     line += "temp" + sep;
     line += "humid" + sep;
-    line += "pressr" + sep;
+    if(conf["dht_type"]=="BMP280")
+      line += "pressr" + sep;
     line += "lux" + sep;
     line += "soil" + sep;
     line += "salt" + sep;
-#ifdef DEBUG_BATTERY
+#ifdef DEBUG_MODE
     line += "batAdc" + sep;
 #endif
     line += "batPerc";
@@ -247,11 +249,12 @@ void logSensors(){
   line += data.time + sep;
   line += String(data.temp + atof(conf["offs_temp"].c_str()), 1) + sep;
   line += String(data.humid + atof(conf["offs_humid"].c_str()), 1) + sep;
-  line += String(data.pressure + atof(conf["offs_pressure"].c_str()), 1) + sep;
+  if(conf["dht_type"]=="BMP280")
+    line += String(data.pressure + atof(conf["offs_pressure"].c_str()), 1) + sep;
   line += String(data.lux + atof(conf["offs_lux"].c_str()), 1) + sep;
   line += (data.soil + conf["offs_soil"].toInt()) + sep;
   line += (data.salt + conf["offs_salt"].toInt()) + sep;
-  #ifdef DEBUG_BATTERY
+  #ifdef DEBUG_MODE
     line += String(data.batAdcVolt) + sep;
   #endif
   line += String(data.batPerc, 0);
