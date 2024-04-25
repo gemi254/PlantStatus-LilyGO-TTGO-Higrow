@@ -7,11 +7,8 @@ uint32_t readBatteryADC(){
 float calcBattery(uint16_t AdcVolt){
   data.batAdcVolt = AdcVolt;
   // TP4054 Standalone Linear Li-lon Battery Charger
-  // Preset 4.2V Charge Voltage with 1% Accuracy
-  // 2.9V Trickle Charge Threshold
-
-  // Battery adc volt measured with multimetr, after disconecting from board,
-  // and value reported at end discharge, and value reported just after charging
+  // Preset 4.2V Charge Voltage with 1% Accuracy, 2.9V Trickle Charge Threshold
+  // max adc: 2074 min adc: 1534
 
   //Battery adc readings limits
   float bat_reading_low = atof(conf["bat_adc_low"].c_str());
@@ -30,19 +27,19 @@ float calcBattery(uint16_t AdcVolt){
   //Average from previous value
   float batPercAgv = batPerc;
   if(lastBoot["bat_perc"] !="" && lastBoot["bat_perc"] !="nan"){
-     float lastPerc = (atof(lastBoot["bat_perc"].c_str()));
-     batPercAgv = ((lastPerc + truncateFloat(batPerc, 0) ) / 2.0F);
+    float lastPerc = (atof(lastBoot["bat_perc"].c_str()));
+    batPercAgv = ((lastPerc + truncateFloat(batPerc, 0) ) / 2.0F);
   }
   LOG_D("Battery last perc: %s, cur: %3.1f, avg: %3.1f\n", lastBoot["bat_perc"].c_str(), batPerc, batPercAgv);
 
   if (batPerc > BATT_PERC_ONPOWER) onPower = true;
   else onPower = false;
-  LOG_I("Battery adcV: %lu, V: %3.3f, perc: %3.1f %%, onPower: %i\n", AdcVolt, battery_voltage, batPercAgv, onPower);
+  LOG_I("Battery adcV: %lu, V: %3.3f, Avg perc: %3.1f %%, onPower: %i\n", AdcVolt, battery_voltage, batPerc, onPower);
   return batPercAgv;
 
 }
 // Calculate battery discharge days
-// Connected to the Internet about 150mA of current, the peak value 300mA, and the average is about 100mA
+// Connected to the Internet about 150mA of current, the peak 300mA, and the average 100mA
 float calcBatteryDays(){
   float daysOnBattery = 0.0F;
   if (onPower){
@@ -57,9 +54,9 @@ float calcBatteryDays(){
     //Reset counters
     lastBoot.put("boot_cnt", "0",true);
     lastBoot.put("boot_cnt_err", "0",true);
+    lastBoot.put("last_error", "",true);
     LOG_I("Battery CHARGING, date: %s\n", curDate.c_str());
-  }else{ //Discharging
-    onPower = false;
+  }else{ // Discharging
     daysOnBattery = 0.0F;
     File f = STORAGE.open(LAST_BAT_INI,"r");
     if(f){
