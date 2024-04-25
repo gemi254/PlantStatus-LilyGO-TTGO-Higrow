@@ -47,7 +47,7 @@ void syncTime(){
       showLocalTime("NTP");
       return;
     }else{
-      LOG_I("Time not sync\n");
+      LOG_D("Time not in sync yet\n");
     }
     delay(2000);
     tries--;
