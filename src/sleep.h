@@ -2,16 +2,20 @@ void mqttDisconnect();
 void clearMqttRetainMsg();
 
 // Enter deep sleep
-void goToDeepSleep(const char *reason, bool error=true)
+void goToDeepSleep(const char *reason, bool error = true)
 {
-  clearMqttRetainMsg();
+  if(mqttClient.state() == MQTT_CONNECTED)
+    clearMqttRetainMsg();
 
   if(onPower && error){
     LOG_W("OnPower, no sleep on error: %s\n", reason);
+    if(error)
+      lastBoot.put("last_error", String(reason) + ", tm: " + getCurDateTimeString(), true);
     return;
   }
 
-  mqttDisconnect();
+  if(mqttClient.state() == MQTT_CONNECTED)
+    mqttDisconnect();
 
   //Disable wifi
   WiFi.disconnect(true);
@@ -30,9 +34,11 @@ void goToDeepSleep(const char *reason, bool error=true)
   lastBoot.put("sleep_reason", String(reason), true);
   lastBoot.put("bat_voltage", String(data.batVolt,2), true);
   lastBoot.put("bat_perc", String(data.batPerc,0), true);
+  if(error)
+    lastBoot.put("last_error", String(reason) + ", tm: " + getCurDateTimeString(), true);
   //Save last boot vars
   lastBoot.saveConfigFile(LAST_BOOT_INI);
-
+  //lastBoot.dump();
   LOG_W("Sleep, ms: %lu, reason: %s, Boots: %u, BootsErr: %u, millis: %lu\n", sleepTime, reason, lastBoot["boot_cnt"].toInt(), lastBoot["boot_cnt_err"].toInt(), (millis() - appStart));
   Serial.flush();
   if(logFile) logFile.close();
