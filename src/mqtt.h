@@ -1,3 +1,5 @@
+//#define DEBUG_MQTT             // Uncomment to debug mqtt
+
 #define QUOTE(val) String(F("\"")) + val + String(F("\""))
 #define JSON_TEMPLATE( key, val ) QUOTE(key) + F(": ") + (val)
 
@@ -18,7 +20,7 @@ void mqttConnect(){
   bool con = mqttClient.connect(broker.c_str(), conf["mqtt_user"].c_str(), conf["mqtt_pass"].c_str());
   if (!con) {
     LOG_E("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
-    goToDeepSleep("mqttConnectFail");
+    goToDeepSleep("mqttFail");
   }else{
     LOG_I("Connecting to MQTT broker: %s:%i OK\n", broker, port);
     if( !mqttClient.publish( getMqttPath(F("/lwt")).c_str(), "online", true) ) {
@@ -201,7 +203,7 @@ void mqttSetup(String field, String chipId, String uom = "x", String dc = "x", c
   //Send to mqtt
   char buffer_c[2048];
   serializeJson(doc_c, buffer_c);
-  bool retained = false;
+  bool retained = true;
 
   mqttPublish(topic.c_str(), buffer_c, retained);
 
@@ -258,22 +260,21 @@ void mqttSetupDevice(String chipId){
     mqttSetup("RSSI",           chipId, "dBm","signal_strength", "/state");
     mqttSetup("batVolt",        chipId, "V",  "battery", "/state");
     mqttSetup("batPerc",        chipId, "%",  "battery", "/state");
-    #ifdef DEBUG_BATTERY
-    mqttSetup("batChargeDate",  chipId, "x",  "date", "/state");
-    mqttSetup("batADC",         chipId, "x",  "x", "/state");
-    mqttSetup("onPower",        chipId, "x", "x", "/state");
+    #ifdef DEBUG_MODE
+      mqttSetup("batChargeDate",  chipId, "x",  "date", "/state");
+      mqttSetup("batADC",         chipId, "x",  "x", "/state");
+      mqttSetup("onPower",        chipId, "x", "x", "/state");
+      mqttSetup("batVolt",        chipId, "V",  "voltage", "/state");
+      mqttSetup("loopMillis",     chipId, "x", "x", "/state");
+      mqttSetup("sleepReason",    chipId, "x", "x", "/state");
+      mqttSetup("lastError",      chipId, "x", "x", "/state");
     #endif
     mqttSetup("batDays",        chipId, "D",  "duration", "/state");
-    mqttSetup("batVolt",        chipId, "V",  "voltage", "/state");
-
     mqttSetup("bootCount",      chipId, "x", "x", "/state");
     mqttSetup("bootCountError", chipId, "x", "x", "/state");
-    mqttSetup("loopMillis",     chipId, "x", "x", "/state");
-    mqttSetup("sleepReason",    chipId, "x", "x", "/state");
 
     mqttClient.publish( getMqttPath(F("/lwt")).c_str(), "online", true);
 }
-
 
 // Receive mqtt config commands
 void subscribeCommands(){
@@ -308,23 +309,18 @@ String getJsonBuff(const byte type ){
 
   if(type == 0 || type == 2){
     plant["batPerc"] = data.batPerc;
-    #ifdef DEBUG_BATTERY
-    plant["batChargeDate"] = data.batChargeDate;
-    plant["batADC"] = data.batAdcVolt;
-    plant["batVolt"] = truncateFloat(data.batVolt, 2);
-    plant["onPower"] = onPower;
+    #ifdef DEBUG_MODE
+      plant["batChargeDate"] = data.batChargeDate;
+      plant["batADC"] = data.batAdcVolt;
+      plant["batVolt"] = truncateFloat(data.batVolt, 2);
+      plant["onPower"] = onPower;
+      plant["loopMillis"] = millis() - appStart;
+      plant["sleepReason"] = data.sleepReason;
+      plant["lastError"] = data.lastError;
     #endif
     plant["batDays"] = truncateFloat(data.batDays, 1);
-    /*
-    #ifdef _DEBUG_BATTERY
-    plant["batLastPerc"] = lastBoot["bat_perc"];
-    plant["batPercAvg"] = percAvg;
-    plant["batLastVolt"] = truncate( atof(lastBoot["bat_voltage"].c_str()), 2);
-    #endif*/
     plant["bootCount"] = data.bootCnt;
     plant["bootCountError"] = data.bootCntError;
-    plant["loopMillis"] = millis() - appStart;
-    plant["sleepReason"] = data.sleepReason;
     plant["RSSI"] = WiFi.RSSI(); //wifiRSSI;
     plant["IpAddress"] = WiFi.localIP().toString();
   }
@@ -341,7 +337,7 @@ void publishSensors() {
   String topicS = getMqttPath(F("/sensors"));
   String jsonBuff = getJsonBuff(1);
 
-  bool retained =  true;
+  bool retained =  false;
   mqttPublish(topicS.c_str(), jsonBuff.c_str(), retained );
 
   //Publish state
