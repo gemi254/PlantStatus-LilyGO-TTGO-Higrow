@@ -133,10 +133,10 @@ function createCtxs(id, chartData){
             inf += "Min: <b>"+ chartData.info[key].min + "</b> at " + chartData.data['DateTime'][ chartData.info[key].minT ].split(" ")[1] + ",&nbsp;&nbsp;"
             inf += "Max: <b>"+ chartData.info[key].max + "</b> at " + chartData.data['DateTime'][ chartData.info[key].maxT ].split(" ")[1]
             inf += "&nbsp;&nbsp; Avg: <b>" + chartData.info[key].avg + "</b>"
+            span.innerHTML += '<div class="label">'+ inf  +'</div>'
             span.innerHTML += '<div class="context"><canvas id="'+ ctxName +'" width="1024px" height="250px"></canvas></div>'
             //inf += " len: "+ chartData.info[key].chLen
             inf += '</span>'
-            span.innerHTML += '<div class="label">'+ inf  +'</div>'
             span.innerHTML += '</div>'
             document.getElementById('charts').insertBefore(span, null);
             drawChart(ctxName, chartData, key);
