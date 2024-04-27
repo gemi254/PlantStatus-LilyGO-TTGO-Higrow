@@ -100,7 +100,7 @@ RTC_DATA_ATTR int bootCntError = 0;
 uint16_t adcVolt = 0;
 
 // Timers
-unsigned long sleepTimerCountdown = 0; // Going to sleep timer
+unsigned long sleepTimerCountdown = 1000; // Going to sleep timer
 unsigned long sensorReadMs        = 0; // Sensors read inteval
 unsigned long sensorLogMs         = 0; // Sensors log inteval
 unsigned long sleepCheckMs        = 0; // Check for sleep interval
