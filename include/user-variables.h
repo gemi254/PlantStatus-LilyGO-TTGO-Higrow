@@ -64,7 +64,7 @@ Sensors calibration:
       default: 1534
   - bat_adc_high:
       label: Full battery vadc reading (float:2280 max: 2644)
-      default: 2590
+      default: 2074
 
 Sensors offsets:
   - offs_lux:
