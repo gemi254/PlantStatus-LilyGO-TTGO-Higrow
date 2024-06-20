@@ -29,7 +29,7 @@ void _log_printf(const char *format, ...);
 #include <ConfigAssist.h>        //Config assist class
 #include "user-variables.h"
 
-#define APP_VER           "1.2.4"     // Update config assist && move to yaml config
+#define APP_VER           "1.2.5"     // Update config assist && move to yaml config
 #define LED_PIN           (13)
 #define I2C_SDA           (25)
 #define I2C_SCL           (26)
