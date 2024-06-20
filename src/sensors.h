@@ -39,7 +39,7 @@ bool initBME280(){
 bool initBH1750(){
   //Light sensor
   if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE)){
-    LOG_I("BH1750 begin OK\n");
+    LOG_D("BH1750 begin OK\n");
   }else{
     LOG_E("BH1750 begin error \n");
     return false;
