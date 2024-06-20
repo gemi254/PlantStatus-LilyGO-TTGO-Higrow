@@ -25,6 +25,8 @@ String valueUnits(String key, bool u = true){
    return u ? "":        "Name";
   }else if(key=="BatDays"){
    return u ? "":        "Battery days";
+  }else if(key=="freeSpace"){
+   return u ? "Kb":        "Free space";
   }else if(key=="batVolt"){
    return u ? " Volt":   "Battery voltage";
   }else if(key=="batChargeDate"){
