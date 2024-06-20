@@ -55,7 +55,7 @@ float calcBatteryDays(){
     lastBoot.put("boot_cnt", "0",true);
     lastBoot.put("boot_cnt_err", "0",true);
     lastBoot.put("last_error", "",true);
-    LOG_I("Battery CHARGING, date: %s\n", curDate.c_str());
+    LOG_D("Battery CHARGING, date: %s\n", curDate.c_str());
   }else{ // Discharging
     daysOnBattery = 0.0F;
     File f = STORAGE.open(LAST_BAT_INI,"r");
