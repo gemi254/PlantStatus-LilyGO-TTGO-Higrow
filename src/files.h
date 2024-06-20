@@ -1,6 +1,6 @@
 
-#define MIN_STORAGE_SPACE (64 * 1024)  //Minimum allowed space for log rotate to work
-#define DATA_DIR "/data"                //Dicectory to save data logs
+#define MIN_STORAGE_SPACE (350 * 1024)  // Minimum allowed space for log rotate to work
+#define DATA_DIR "/data"                // Dicectory to save data logs
 
 // Append text at end of a file
 void writeFile(const char * path, const char * message) {
@@ -132,22 +132,22 @@ void removeFolder(String dirName){
   while (file) {
     String filePath = file.path();
     file = root.openNextFile();
-    LOG_I("Removing file: %s \n", filePath.c_str());
-    /*
+    LOG_D("Removing file: %s \n", filePath.c_str());
+
     if(!STORAGE.remove(filePath.c_str())){
       LOG_E("Remove FAILED: %s \n", filePath.c_str());
-    };*/
+    };
   }
-  LOG_I("Removing dir: %s \n", dirName.c_str());
-  //STORAGE.rmdir(dirName);
+  LOG_D("Removing dir: %s \n", dirName.c_str());
+  STORAGE.rmdir(dirName);
 }
 
 // Check an delete logs to save space
 void checkLogRotate(){
   size_t free = STORAGE.totalBytes() - STORAGE.usedBytes();
-  LOG_I("Storage, free: %lu K\n", (free/1024));
+  LOG_D("Storage size: %lu K, used: %lu K, free: %lu K\n",STORAGE.totalBytes() / 1024, STORAGE.usedBytes() / 1024,  free/1024);
   if(free < MIN_STORAGE_SPACE){
-    LOG_W("Storage is running low, free: %lu\n", free);
+    LOG_W("Storage is running low, free: %lu K\n", free/1024);
     String oldestDir = getOldestDir(DATA_DIR);
     removeFolder(oldestDir);
   }
