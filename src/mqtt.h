@@ -258,13 +258,13 @@ void mqttSetupDevice(String chipId){
     // Status fields
     mqttSetup("IpAddress",      chipId, "x",  "x", "/state");
     mqttSetup("RSSI",           chipId, "dBm","signal_strength", "/state");
-    mqttSetup("batVolt",        chipId, "V",  "battery", "/state");
     mqttSetup("batPerc",        chipId, "%",  "battery", "/state");
     #ifdef DEBUG_MODE
-      mqttSetup("batChargeDate",  chipId, "x",  "date", "/state");
-      mqttSetup("batADC",         chipId, "x",  "x", "/state");
+      mqttSetup("freeSpace",      chipId, "Kb", "x", "/state");
+      mqttSetup("batChargeDate",  chipId, "x", "date", "/state");
+      mqttSetup("batADC",         chipId, "x", "x", "/state");
       mqttSetup("onPower",        chipId, "x", "x", "/state");
-      mqttSetup("batVolt",        chipId, "V",  "voltage", "/state");
+      mqttSetup("batVolt",        chipId, "V", "voltage", "/state");
       mqttSetup("loopMillis",     chipId, "x", "x", "/state");
       mqttSetup("sleepReason",    chipId, "x", "x", "/state");
       mqttSetup("lastError",      chipId, "x", "x", "/state");
@@ -310,6 +310,7 @@ String getJsonBuff(const byte type ){
   if(type == 0 || type == 2){
     plant["batPerc"] = data.batPerc;
     #ifdef DEBUG_MODE
+      plant["freeSpace"] = (STORAGE.totalBytes() - STORAGE.usedBytes()) / 1024;
       plant["batChargeDate"] = data.batChargeDate;
       plant["batADC"] = data.batAdcVolt;
       plant["batVolt"] = truncateFloat(data.batVolt, 2);
@@ -323,6 +324,7 @@ String getJsonBuff(const byte type ){
     plant["bootCountError"] = data.bootCntError;
     plant["RSSI"] = WiFi.RSSI(); //wifiRSSI;
     plant["IpAddress"] = WiFi.localIP().toString();
+
   }
 
   // Send to mqtt as string
