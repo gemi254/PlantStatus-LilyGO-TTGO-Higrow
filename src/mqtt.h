@@ -1,15 +1,17 @@
-//#define DEBUG_MQTT             // Uncomment to debug mqtt
-
 #define QUOTE(val) String(F("\"")) + val + String(F("\""))
 #define JSON_TEMPLATE( key, val ) QUOTE(key) + F(": ") + (val)
 
 // Get mqtt base publish path + topic]
-String getMqttPath(const String &topic){
+String getMqttPath(const String &topic, const String device = "sensor/"){
     String topicStr = conf["mqtt_topic_prefix"];
     if(!topicStr.endsWith("/")) topicStr += "/";
-    topicStr += conf["plant_name"]; // + "-" + getChipID();
-    return topicStr + topic;
+    if(device != "") topicStr += device + conf["plant_name"] + topic;
+    else topicStr += topic;
+    return topicStr ;
 }
+// Get home assistant availability topic
+String getMqttHasAvailPath(){  return  getMqttPath(F("/status"),""); }
+
 // Connect to mqtt
 void mqttConnect(){
   String broker = conf["mqtt_broker"];
@@ -26,6 +28,7 @@ void mqttConnect(){
     if( !mqttClient.publish( getMqttPath(F("/lwt")).c_str(), "online", true) ) {
       LOG_E("Failed to send lwt mqtt online message\n");
     }
+
   }
 }
 // Disconnect from mqtt
@@ -34,6 +37,7 @@ void mqttDisconnect() {
     LOG_E("Failed to send lwt mqtt offline message\n");
   }
   mqttClient.unsubscribe(getMqttPath(F("/cmd")).c_str());
+  mqttClient.unsubscribe(getMqttHasAvailPath().c_str());
   mqttClient.loop();
   mqttClient.disconnect();
   delay(50);
@@ -48,11 +52,9 @@ void mqttPublish(const char* topic, const char* payload, boolean retained){
   if(!mqttClient.connected())  return;
 
  //Nice print of configuration mqtt message
-  #if defined(DEBUG_MQTT)
-      LOG_D("mqtt topic: %s\n", topic);
-      LOG_D("mqtt payload: %s\n", payload);
-  #endif
-
+  LOG_D("mqtt topic: %s\n", topic);
+  LOG_D("mqtt payload: %s\n", payload);
+ 
   if( mqttClient.publish( topic, payload, retained ) ){
     LOG_V("Message published\n");
   } else {
@@ -80,10 +82,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   for (int i = 0; i < length; i++) {
     msg+= ((char)payload[i]);
   }
-  clearMqttRetain = true;
   LOG_I("Mqtt rcv topic: %s, msg: %s\n", topic, msg.c_str());
-
+  //Hasio status online message
+  if ((String(topic) == conf["mqtt_topic_prefix"] + "status") && msg == "online"){
+    mqttSetupDevice();
+    return;
+  }
   //Messages as 'cmd=val'
+  clearMqttRetain = true;
   char *token = NULL;
   char seps[] = "=";
   token = strtok(&msg[0], seps);
@@ -110,7 +116,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       startWebSever();
     }
   }else if(key=="hasDiscovery"){
-      mqttSetupDevice(getChipID());
+      mqttSetupDevice();
   }else{
     //Increasments, offs+=1, offs-=1.5
     if(key.endsWith("+") || key.endsWith("-")){
@@ -159,9 +165,19 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     conf.saveConfigFile();
   }
 }
+// Receive mqtt config commands
+void mqttSubscribe(){
+  String topicCmd = getMqttPath(F("/cmd"));
+  //Subscribe to config topic
+  mqttClient.setCallback(mqttCallback);
+  mqttClient.subscribe(topicCmd.c_str());
+  LOG_I("Subscribed at: %s\n",topicCmd.c_str());
 
+  topicCmd  = getMqttPath(F("/status"),"");
+  LOG_I("Subscribed at: %s\n",topicCmd.c_str());
+}
 // Get mqqtt json device
-String getMqttDevice(){
+String hasioGetDevice(){
     String jDev = F("{\n");
     jDev += "    " +JSON_TEMPLATE(F("name"),  QUOTE(conf["plant_name"]) ) + F(",\n");
     jDev += "    " +JSON_TEMPLATE(F("model"), QUOTE(conf["host_name"] + "-" + ESP.getChipModel()) ) + F(",\n");
@@ -174,64 +190,60 @@ String getMqttDevice(){
     return jDev;
 }
 
-//Send mqtt autodiscovery messages
-void mqttSetup(String field, String chipId, String uom = "x", String dc = "x", const String stateTopic = F("/sensors"))
+//Send mqtt autodiscovery entities message
+void hasioSetupEntitie(const String &name, const String &displayName, String uom = "x", String dc = "x", const String stateTopic = F("/sensors"))
 {
-  const String topic = getMqttPath(String("/") + field + F("/config"));
-  StaticJsonDocument<1792> doc_c;
+  JsonDocument doc_c;
   JsonObject root = doc_c.to<JsonObject>();
-  root["name"] =  conf["plant_name"] +" "+ field;
-  root["unique_id"] = chipId +"-"+ field;
-  root["object_id"] = conf["host_name"] +" "+ field;
+  root["name"] =  displayName;
+  root["unique_id"] = conf["host_name"]  + F("_") + getChipID() + F("-") + name;
+  //root["object_id"] = conf["host_name"] +" "+ name;
   root["state_topic"] = getMqttPath(stateTopic);
-  root["value_template"] = "{{ value_json['" + field +"'] }}";
-  root["payload_not_available"] = "offline";
-  root["payload_available"] = "online";
-  root["state_class"] = "measurement";
+  root["value_template"] = "{{ value_json['" + name +"'] }}";
+  if(stateTopic==F("/sensors"))
+    root["state_class"] = "measurement";
+
+  if(stateTopic == F("/state"))
+    root["entity_category"] = F("diagnostic");
+
   if ( uom != "x" )
     root["unit_of_measurement"] = uom;
   if ( dc != "x" )
     root["device_class"] = dc;
-  if(stateTopic == F("/state"))
-    root["entity_category"] = F("diagnostic");
 
-  StaticJsonDocument<512> dev_root;
+  JsonDocument dev_root;
   // Deserialize the JSON document
-  DeserializationError error = deserializeJson(dev_root, getMqttDevice());
+  DeserializationError error = deserializeJson(dev_root, hasioGetDevice());
   root["device"] = dev_root;
 
   //Send to mqtt
   char buffer_c[2048];
   serializeJson(doc_c, buffer_c);
   bool retained = true;
-
+  const String topic = getMqttPath(String("/") + name + F("/config"));
   mqttPublish(topic.c_str(), buffer_c, retained);
 
 }
 
-// Home Assitant MQTT Config Diagnostics messages
-void mqttSetupConfigStatus(String chipId){
-  LOG_I("Setting homeassistant mqtt Config Status ..\n");
-  String field = "Status";
-  const String topic = getMqttPath("/" + field + F("/config")).c_str();
+// Home Assitant MQTT Diagnostics network status
+void hasioNetworkStatus(){
+  LOG_D("Sending homeassistant mqtt Config Status ..\n");  
+  const String topic = getMqttPath(F("/network/config")).c_str();
 
-  StaticJsonDocument<512> doc_c;
+  JsonDocument doc_c;
   JsonObject root = doc_c.to<JsonObject>();
 
-  root["name"] = field;
-  root["unique_id"] = chipId +"-"+ field;
-  root["object_id"] = conf["host_name"] +" "+ field;
-  root["entity_category"] = "config";
+  root["name"] = "Network status";  
+  root["unique_id"] = conf["host_name"]  + F("_") + getChipID() + F("-") +  F("network");
+  //root["object_id"] = conf["host_name"] +" "+ "network";
+  root["entity_category"] = "diagnostic";
 
   root["icon"] = "mdi:check-network";
   root["retain"] = "true";
-  root["command_topic"] = getMqttPath(F("/cmd"));
-  root["availability_topic"] = getMqttPath(F("/lwt"));
   root["state_topic"] = getMqttPath(F("/lwt"));
-
-  StaticJsonDocument<256> dev_root;
+  JsonDocument dev_root;
   // Deserialize the JSON document
-  DeserializationError error = deserializeJson(dev_root, getMqttDevice());
+  DeserializationError error = deserializeJson(dev_root, hasioGetDevice());
   root["device"] = dev_root;
   //Send to mqtt
   char buffer_c[512];
@@ -242,54 +254,46 @@ void mqttSetupConfigStatus(String chipId){
 }
 // Home Assitant MQTT Autodiscovery messages
 // https://www.home-assistant.io/integrations/sensor/#device-class
-void mqttSetupDevice(String chipId){
-    mqttSetupConfigStatus(chipId);
-    LOG_D("Setting homeassistant mqtt device sensors..\n");
-
+void mqttSetupDevice(){
+    
     //Sensors fields
-    mqttSetup("lux",            chipId, "lx", "illuminance");
-    mqttSetup("humid",          chipId, "%",  "humidity");
+    hasioSetupEntitie("lux",              "Luminosity", "lx", "illuminance");
+    hasioSetupEntitie("humid",            "Humidity", "%",  "humidity");
     if(conf["dht_type"]=="BMP280")
-      mqttSetup("press",        chipId, "hPa","pressure");
-    mqttSetup("soil",           chipId, "%",  "moisture");
-    mqttSetup("salt",           chipId, "µS/cm");
-    mqttSetup("temp",           chipId, "°C", "temperature");
+      hasioSetupEntitie("press",          "Presure", "hPa","pressure");
+    hasioSetupEntitie("soil",             "Soil moisture", "%",  "moisture");
+    hasioSetupEntitie("salt",             "Soil salt", "µS/cm");
+    hasioSetupEntitie("temp",             "Temperature", "°C", "temperature");
 
-    // Status fields
-    mqttSetup("IpAddress",      chipId, "x",  "x", "/state");
-    mqttSetup("RSSI",           chipId, "dBm","signal_strength", "/state");
-    mqttSetup("batPerc",        chipId, "%",  "battery", "/state");
+    // Diagnostics fields
+    hasioSetupEntitie("IpAddress",        "Ip address", "x",  "x", "/state");
+    hasioSetupEntitie("RSSI",             "Signal strength", "dBm","signal_strength", "/state");
+    hasioSetupEntitie("batPerc",          "Battery", "%",  "battery", "/state");
     #ifdef DEBUG_MODE
-      mqttSetup("freeSpace",      chipId, "Kb", "x", "/state");
-      mqttSetup("batChargeDate",  chipId, "x", "date", "/state");
-      mqttSetup("batADC",         chipId, "x", "x", "/state");
-      mqttSetup("onPower",        chipId, "x", "x", "/state");
-      mqttSetup("batVolt",        chipId, "V", "voltage", "/state");
-      mqttSetup("loopMillis",     chipId, "x", "x", "/state");
-      mqttSetup("sleepReason",    chipId, "x", "x", "/state");
-      mqttSetup("lastError",      chipId, "x", "x", "/state");
+      hasioSetupEntitie("freeSpace",      "Free space", "Kb", "x", "/state");
+      hasioSetupEntitie("batChargeDate",  "Battery charge date", "x", "date", "/state");
+      hasioSetupEntitie("batADC",         "Battery adc", " ", "x", "/state");
+      hasioSetupEntitie("onPower",        "Device on power", "x", "x", "/state");
+      hasioSetupEntitie("batVolt",        "Battery volt", "V", "voltage", "/state");
+      hasioSetupEntitie("loopMillis",     "Loop time", "ms", "x", "/state");
+      hasioSetupEntitie("sleepReason",    "Sleep reason", "x", "x", "/state");
+      hasioSetupEntitie("lastError",      "Last error", "x", "x", "/state");
     #endif
-    mqttSetup("batDays",        chipId, "D",  "duration", "/state");
-    mqttSetup("bootCount",      chipId, "x", "x", "/state");
-    mqttSetup("bootCountError", chipId, "x", "x", "/state");
+    hasioSetupEntitie("batDays",          "Days on battery", "d",  "x", "/state");
+    hasioSetupEntitie("bootCount",        "Boots count", " ", "x", "/state");
+    hasioSetupEntitie("bootCountError",   "Boots count error", " ", "x", "/state");
+
+    hasioNetworkStatus();
 
     mqttClient.publish( getMqttPath(F("/lwt")).c_str(), "online", true);
-}
-
-// Receive mqtt config commands
-void subscribeCommands(){
-  const String topicConf = getMqttPath(F("/cmd"));
-  //Subscribe to config topic
-  mqttClient.setCallback(mqttCallback);
-  mqttClient.subscribe(topicConf.c_str());
-  LOG_I("Subscribed at: %s\n",topicConf.c_str());
 }
 
 // Get a json with sensors
 // 0 - All, 1 - Sensors, 2 - Diagnostics
 String getJsonBuff(const byte type ){
 
-  StaticJsonDocument<1792> doc;
+  //StaticJsonDocument<1792> doc;
+  JsonDocument doc;
   //Set the values in the document according to SensorData
   JsonObject plant = doc.to<JsonObject>();
   if(type == 0 || type == 1){
