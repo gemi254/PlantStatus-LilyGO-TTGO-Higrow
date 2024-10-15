@@ -143,7 +143,7 @@ bool connectToNetwork(){
 
 // Functions forward definitions
 String getJsonBuff(const byte type = 0 );
-void mqttSetupDevice(String chipId);
+void mqttSetupDevice();
 
 //Get one line html string
 String getLineHtml(JsonPair kv){
@@ -181,11 +181,9 @@ static void handleAssistRoot() {
 
 // Handler function for root of the web page
 static void handleRoot(){
-  //Read on each refresh
-  //readSensors();
   String jsonBuff = getJsonBuff();
   DeserializationError error;
-  DynamicJsonDocument doc(1024);
+  JsonDocument doc;
   //Parse json data
   error = deserializeJson(doc, jsonBuff.c_str());
   if (error) {
@@ -350,7 +348,7 @@ static void handleCmd(){
       ESP.restart();
       return;
     }else if(cmd=="hasDiscovery"){
-      mqttSetupDevice(getChipID());
+      mqttSetupDevice();
       out.replace("{msg}", "Sended mqtt homeassistant device discovery");
       out.replace("{title}", "Homeassistant discovery");
     }else if(cmd=="reset"){
@@ -525,7 +523,7 @@ bool isClientConnected(WEB_SERVER *pServer){
 
   WiFiClient myclient = pServer->client();
   if(myclient && myclient.connected()){
-    LOG_I("Connected, ST client\n");
+    LOG_D("Connected, ST client\n");
     return true;
   }
   return false;
