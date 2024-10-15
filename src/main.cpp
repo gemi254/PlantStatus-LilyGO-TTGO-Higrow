@@ -19,9 +19,9 @@
 #include <ESPmDNS.h>
 
 #define LOGGER_LOG_MODE  3       // External
-#define LOGGER_LOG_LEVEL 3       // Errors & Warnings & Info & Debug & Verbose
+#define LOGGER_LOG_LEVEL 2       // Errors & Warnings & Info & Debug & Verbose
 
-#define DEBUG_MODE               // Comment to enter production mode
+//#define DEBUG_MODE               // Uncomment to enter debug  mode
 bool logToFile = false;
 static File logFile;
 void _log_printf(const char *format, ...);
@@ -254,13 +254,11 @@ void setup()
   //Connect to mqtt broker
   mqttConnect();
   if(mqttClient.connected())  //Listen config commands
-    subscribeCommands();
+    mqttSubscribe();
 
   //Start web server on long button press or on power connected?
   btState = !digitalRead(USER_BUTTON);
-  #ifdef DEBUG_MQTT
-  btState = true;
-  #endif
+  //btState = true;
   if(btState){
     startWebSever();
     ResetCountdownTimer("Webserver start");
