@@ -105,7 +105,7 @@ Mosquitto broker:
       default:
   - mqtt_topic_prefix:
       label: Mosquitto topic path prefix
-      default: homeassistant/sensor/
+      default: homeassistant/
 
 Other settings:
   - time_zone:
