@@ -1,5 +1,5 @@
 
-#define MIN_STORAGE_SPACE (350 * 1024)  // Minimum allowed space for log rotate to work
+#define MIN_STORAGE_SPACE (360 * 1024)  // Minimum allowed space for log rotate to work
 #define DATA_DIR "/data"                // Dicectory to save data logs
 
 // Append text at end of a file
