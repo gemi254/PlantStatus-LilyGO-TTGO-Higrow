@@ -22,8 +22,10 @@ void goToDeepSleep(const char *reason, bool error = true)
   WiFi.mode(WIFI_OFF);
   btStop();
 
-  uint16_t sleepTime = (error)?conf["sleep_time_error"].toInt() : conf["sleep_time"].toInt();
-
+  uint16_t sleepTime = (error)?conf("sleep_time_error").toInt() : conf("sleep_time").toInt();
+#if LOGGER_LOG_LEVEL > 3
+  sleepTime = 30;
+#endif
   //Configure the timer to wake us up!
   esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
   esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
@@ -39,7 +41,7 @@ void goToDeepSleep(const char *reason, bool error = true)
   //Save last boot vars
   lastBoot.saveConfigFile(LAST_BOOT_INI);
   //lastBoot.dump();
-  LOG_W("Sleep, ms: %lu, reason: %s, Boots: %u, BootsErr: %u, millis: %lu\n", sleepTime, reason, lastBoot["boot_cnt"].toInt(), lastBoot["boot_cnt_err"].toInt(), (millis() - appStart));
+  LOG_I("Sleep, sec: %lu, reason: %s, Boots: %u, BootsErr: %u, millis: %lu\n", sleepTime, reason, lastBoot["boot_cnt"].toInt(), lastBoot["boot_cnt_err"].toInt(), (millis() - appStart));
   Serial.flush();
   if(logFile) logFile.close();
   STORAGE.end();
