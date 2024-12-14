@@ -23,7 +23,10 @@ Wifi settings:
   - st_ip2:
       label: Enter a Static ip setup (ip mask gateway) (192.168.4.2 255.255.255.0 192.168.1.1)
       default:
-
+  - connect_timeout:
+      label: Seconds to wait until ST connection
+      default: 10
+      
 Device settings:
   - host_name:
       label: Name your device. {mac} will be replaced with WiFi mac id
