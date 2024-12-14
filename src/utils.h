@@ -22,39 +22,6 @@ String getChipID(){
   return mac; //.substring(12);
 }
 
-// Get current time from NTP server and apply to ESP32
-bool getLocalNTPTime() {
-  if(timeZone=="") timeZone = conf["time_zone"];
-  if(ntpServer=="") ntpServer = conf["ntp_server"];
-  LOG_I("Using NTP server: %s with tz: %s\n", ntpServer.c_str(), timeZone.c_str());
-  configTzTime(timeZone.c_str(), ntpServer.c_str());
-  if (getEpoch() > 10000) {
-    showLocalTime("NTP");
-    return true;
-  }
-  else {
-    LOG_W("Not yet synced with NTP\n");
-    return false;
-  }
-}
-
-// Wait to sync time to ntp
-void syncTime(){
-  int tries = 5;
-  bool sync = getLocalNTPTime();
-  while(!sync && tries >= 0){
-    if (getEpoch() > 10000) {
-      showLocalTime("NTP");
-      return;
-    }else{
-      LOG_D("Time not in sync yet\n");
-    }
-    delay(2000);
-    tries--;
-  };
-  if(tries==0) LOG_I("Time sync: %i\n", timeSynchronized);
-}
-
 // Convert a string to time_t
 time_t convertDateTimeString(String sDateTime){
   tmElements_t tm;
@@ -132,9 +99,9 @@ bool isInt(const std::string& str)
 }
 
 // Reset timer used for sleep
-void ResetCountdownTimer(const char *reason){
+void ResetCountdownTimer(const char *reason, const unsigned long sleepInterval = SLEEP_DELAY_INTERVAL){
   //LOG_D("Reset countdown:  %s.\n",reason);
-  sleepTimerCountdown = SLEEP_DELAY_INTERVAL;
+  sleepTimerCountdown = sleepInterval;
 }
 
 // Remove all ini files
@@ -145,6 +112,7 @@ void reset(){
   STORAGE.remove(LAST_BAT_INI);
   conf.deleteConfig();
 }
+
 // Read analog average value (delete min max)
 uint32_t analogReadAvg(const uint8_t pin, const uint8_t samples = 8){
   uint32_t val = 0;
