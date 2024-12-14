@@ -60,87 +60,6 @@ bool isSensor(String key){
   return false;
 }
 
-// Set static ip if defined
-bool setStaticIP(String st_ip){
-  if(st_ip.length() <= 0) return false;
-
-  IPAddress ip, mask, gw;
-  st_ip.replace("   "," ");
-  st_ip.replace("  "," ");
-  int ndx = st_ip.indexOf(' ');
-  String s = st_ip.substring(0, ndx);
-  s.trim();
-  if(!ip.fromString(s)){
-    LOG_E("Error parsing static ip: %s\n",s.c_str());
-    return false;
-  }
-
-  st_ip = st_ip.substring(ndx + 1, st_ip.length() );
-  ndx = st_ip.indexOf(' ');
-  s = st_ip.substring(0, ndx);
-  s.trim();
-  if(!mask.fromString(s)){
-    LOG_E("Error parsing static ip mask: %s\n",s.c_str());
-    return false;
-  }
-
-  st_ip = st_ip.substring(ndx + 1, st_ip.length() );
-  s = st_ip;
-  s.trim();
-  if(!gw.fromString(s)){
-    LOG_E("Error parsing static ip gw: %s\n",s.c_str());
-    return false;
-  }
-  LOG_D("Wifi ST setting static ip: %s, mask: %s  gw: %s \n", ip.toString().c_str(), mask.toString().c_str(), gw.toString().c_str());
-  WiFi.config(ip, gw, mask);
-  return true;
-}
-// Connect to a SIID network
-bool connectToNetwork(){
-  WiFi.mode(WIFI_STA);
-  //WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE); // call is only a workaround for bug in WiFi class
-  WiFi.setHostname(conf["host_name"].c_str());
-  String st_ssid ="";
-  String st_pass="";
-  String st_ip="";
-  for (int i = 1; i < MAX_SSID_ARR_NO + 1; i++){
-    st_ssid = conf["st_ssid" + String(i)];
-    if(st_ssid=="") continue;
-    st_pass = conf["st_pass" + String(i)];
-
-    //Set static ip if defined
-    st_ip = conf["st_ip" + String(i)];
-    setStaticIP(st_ip);
-
-    //Wifi down, reconnect here
-    LOG_I("Wifi ST connecting to: %s, %s \n",st_ssid.c_str(), st_pass.c_str());
-    //LOG_I("Wifi ST connecting to: %s\n",st_ssid.c_str());
-    WiFi.begin(st_ssid.c_str(), st_pass.c_str());
-    int col = 0;
-    uint32_t startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < CONNECT_TIMEOUT)  {
-      Serial.printf(".");
-      if (++col >= 60){ // just keep terminal from scrolling sideways
-        col = 0;
-        Serial.printf("\n");
-      }
-      Serial.flush();
-      delay(500);
-    }
-    Serial.printf("\n");
-    if(WiFi.status() == WL_CONNECTED) break;
-  }
-
-  if (WiFi.status() != WL_CONNECTED){
-    LOG_E("Wifi connect fail\n");
-    WiFi.disconnect();
-    return false;
-  }else{
-    LOG_I("Wifi AP SSID: %s connected, use 'http://%s' to connect\n", st_ssid.c_str(), WiFi.localIP().toString().c_str());
-  }
-  return true;
-}
-
 // Functions forward definitions
 String getJsonBuff(const byte type = 0 );
 void mqttSetupDevice();
@@ -193,8 +112,8 @@ static void handleRoot(){
   JsonObject root = doc.as<JsonObject>();
   String out(HTML_PAGE_HOME_START);
 
-  out.replace("{page_title}","Sensors of "+ conf["host_name"]);
-  out.replace("{plant_name}",conf["plant_name"]);
+  out.replace("{page_title}","Sensors of "+ conf("host_name"));
+  out.replace("{plant_name}",conf("plant_name"));
 
   pServer->setContentLength(CONTENT_LENGTH_UNKNOWN);
   pServer->sendContent(out);
@@ -203,11 +122,11 @@ static void handleRoot(){
   pServer->sendContent(HTML_PAGE_HOME_SCRIPT);
   //Send time sync script on AP
 #ifdef CA_USE_TIMESYNC
-  if(apStarted) pServer->sendContent("<script>" + conf.getTimeSyncScript() + "</script>");
+  if(conf.isAPEnabled()) pServer->sendContent("<script>" + conf.getTimeSyncScript() + "</script>");
 #endif
   out = HTML_PAGE_HOME_BODY;
-  out.replace("{host_name}",conf["host_name"]);
-  out.replace("{plant_name}",conf["plant_name"]);
+  out.replace("{host_name}",conf("host_name"));
+  out.replace("{plant_name}",conf("plant_name"));
   pServer->sendContent(out);
 
   for (JsonPair kv : root) {
@@ -254,7 +173,7 @@ static void handleViewFile(String fileName, bool download=false){
     LOG_I("Download file: %s, size: %0.1f K", fileName.c_str(), (float)(f.size()/(1024)));
     pServer->sendHeader("Content-Type", "text/text");
     int n = fileName.lastIndexOf( '/' );
-    String downloadName = conf["host_name"] + "_" + fileName.substring( n + 1 );
+    String downloadName = conf("host_name") + "_" + fileName.substring( n + 1 );
     pServer->sendHeader("Content-Disposition", "attachment; filename=" + downloadName);
     pServer->sendHeader("Content-Length", String(f.size()));
     pServer->sendHeader("Connection", "close");
@@ -386,6 +305,7 @@ static void handleFileSytem(){
   String dir(DATA_DIR);
   if(pServer->hasArg("dir")){
     dir = pServer->arg("dir");
+    // Remove trailing slash
     if(dir.endsWith("/") && dir.length()>1) dir.remove(dir.length() - 1);
   }
   std::vector<String> dirArr;               //Directory array
@@ -431,9 +351,9 @@ static void handleFileSytem(){
     out="";
     if(row==1) out+="<table>";
     out += "<tr>";
-    out += "<td><a target='_blank;' title='View' href='/cmd?view=" + dir + "/" + f + "'><b>" + f + "</b></a></td><td>&nbsp;&nbsp" + s + " Kb</td>\n";
-    out += "<td><a title='Download' href='/cmd?download=" + dir + "/" + f + "'>" + HTML_PAGE_SVG_DOWNLOAD + "</a></td>\n";
-    out += "<td><a title='Delete' href='/cmd?del=" + dir + "/" + f + "'>"+ HTML_PAGE_SVG_RECYCLE +"</a></td>\n";
+    out += "<td><a target='_blank;' title='View' href='/cmd?view=" + f + "'><b>" + f + "</b></a></td><td>&nbsp;&nbsp" + s + " Kb</td>\n";
+    out += "<td><a title='Download' href='/cmd?download=" + f + "'>" + HTML_PAGE_SVG_DOWNLOAD + "</a></td>\n";
+    out += "<td><a title='Delete' href='/cmd?del=" + f + "'>"+ HTML_PAGE_SVG_RECYCLE +"</a></td>\n";
     out += "</tr>";
     pServer->sendContent(out);
   }
@@ -470,12 +390,12 @@ static void handleCharts(){
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
     switch(type) {
         case WStype_DISCONNECTED:
-            LOG_I("Websocket [%u] Disconnected!\n", num);
+            LOG_D("Websocket [%u] Disconnected!\n", num);
             break;
         case WStype_CONNECTED:
             {
               IPAddress ip = pWebSocket->remoteIP(num);
-              LOG_I("Websocket [%u] connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+              LOG_D("Websocket [%u] connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
 
               // send message to client
               pWebSocket->sendTXT(num, "Connected");
@@ -516,14 +436,14 @@ bool isClientConnected(WEB_SERVER *pServer){
 
   apClients = WiFi.softAPgetStationNum();
   if(apClients>0){
-    LOG_D("Connected, AP Clients: %u\n", apClients);
+    LOG_V("Connected, AP Clients: %u\n", apClients);
     return true;
   }
   if(pServer==NULL) return false;
 
   WiFiClient myclient = pServer->client();
   if(myclient && myclient.connected()){
-    LOG_D("Connected, ST client\n");
+    LOG_V("Connected, ST client\n");
     return true;
   }
   return false;
@@ -536,7 +456,7 @@ void registerHandlers(){
   pServer->on("/cmd", handleCmd);
 
   //Handlers are registered by configAssist
-  if(!apStarted){
+  if(!conf.isAPEnabled()){
     pServer->on("/cfg", handleAssistRoot );
     //pServer->on("/scan", handleAssistScan );
     conf.setup(*pServer);
@@ -560,7 +480,7 @@ void startWebSockets(){
 // Start the web server
 void startWebSever(){
   if(pServer) return;
-  if (MDNS.begin(conf["host_name"].c_str()))
+  if (MDNS.begin(conf("host_name").c_str()))
     LOG_D("MDNS responder Started\n");
   pServer = new WebServer(80);
   pServer->begin();
@@ -575,7 +495,6 @@ void startAP(){
     pServer = new WebServer(80);
     //Start AP and register configAssist handlers
     conf.setup(*pServer, true);
-    apStarted = true;
 
     //Register app webserver handlers
     registerHandlers();
