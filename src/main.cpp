@@ -15,21 +15,22 @@
 #include <18B20_class.h>
 #include <Adafruit_BME280.h>
 #include <WebSocketsServer.h>
-#include "SPIFFS.h"
 #include <ESPmDNS.h>
 
-#define LOGGER_LOG_MODE  3       // External
-#define LOGGER_LOG_LEVEL 2       // Errors & Warnings & Info & Debug & Verbose
+#define LOGGER_LOG_MODE  3         // External
+#ifndef LOGGER_LOG_LEVEL
+  #define LOGGER_LOG_LEVEL 3       // Errors & Warnings & Info & Debug & Verbose
+#endif
 
-//#define DEBUG_MODE               // Uncomment to enter debug  mode
+//#define VERBOSE_MODE             // Uncomment to enter more details mode
+void _log_printf(const char *format, ...);
+#include <ConfigAssist.h>          // Config assist class
+#include <ConfigAssistHelper.h>    // Config assist helper
+#include "user-variables.h"
 bool logToFile = false;
 static File logFile;
-void _log_printf(const char *format, ...);
 
-#include <ConfigAssist.h>        //Config assist class
-#include "user-variables.h"
-
-#define APP_VER           "1.2.5"     // Update config assist && move to yaml config
+#define APP_VER           "1.2.6"  // Update config assist && move to yaml config
 #define LED_PIN           (13)
 #define I2C_SDA           (25)
 #define I2C_SCL           (26)
@@ -51,7 +52,7 @@ void _log_printf(const char *format, ...);
 #define LAST_BOOT_INI  "/lastboot.ini"
 #define LAST_BAT_INI   "/batinf.ini"
 #define CONNECT_TIMEOUT 8000
-#define MAX_SSID_ARR_NO 2 // Maximum ssid json will describe
+#define MAX_SSID_ARR_NO 2            // Maximum ssids in json config
 
 #define BATT_NO_OF_SAMPLES     8     // Samples to read from BAT_ADC
 #define SOIL_NO_OF_SAMPLES     8     // Samples to read from SOIL_PIN
@@ -110,14 +111,13 @@ unsigned long btPressMs           = 0; // Button pressed ms
 bool bmeFound = false;
 bool dhtFound = false;
 bool onPower = false;              // Is battery charging
-bool wifiConnected = false;        // Wifi connected
-bool apStarted = false;            // AP started
 bool clearMqttRetain = false;      // Clean retain messages
 static String chipID;              // Wifi chipid
 static uint8_t apClients = 0;      // Connected ap clients
 
 bool wireOk = false;
 bool wireOk1 = false;
+
 // User button
 bool btPress = false;
 bool btState = false;
@@ -179,25 +179,28 @@ void setup()
   Serial.begin(115200);
   Serial.print("\n\n\n\n");
   Serial.flush();
-  //Measure bat with no wifi enabled
-  adcVolt =  readBatteryADC();
-
-  //Initiate SPIFFS and Mount file system
-  if (!SPIFFS.begin(true)){
-    Serial.print("Error mounting SPIFFS\n");
-  }
   LOG_I("* * * * Starting v%s * * * * * \n", APP_VER);
 
-  //Enable configAssist logPrint to file
-  logToFile = conf["logFile"].toInt();
-  //Failed to load config or ssid empty
-  if(!conf.confExists() || conf["st_ssid1"]==""){
+  // Measure bat with no wifi enabled
+  adcVolt =  readBatteryADC();
+
+  // Enable configAssist logPrint to file?
+  logToFile = conf("logFile").toInt();
+
+  // Check free space and delete old files if needed
+  checkLogRotate();
+
+  // Failed to load config or ssid empty
+  if(!conf.confExists() || conf("st_ssid1")==""){
     startAP();
     return;
   }
 
-  //Time is ok on wake up but needs to be configured with tz
-  setenv("TZ", conf["time_zone"].c_str(), 1);
+  // Create config helper class
+  ConfigAssistHelper cah(conf);
+
+  // Time is ok on wake up but needs to be configured with tz
+  cah.setEnvTimeZone();
 
   if(rtc_get_reset_reason(0) == DEEPSLEEP_RESET)
     LOG_D("Wake up from sleep\n");
@@ -205,10 +208,6 @@ void setup()
   //User button check at startup
   btState = !digitalRead(USER_BUTTON);
   LOG_D("Button: %i, Battery start adc: %lu\n", btState,  adcVolt);
-
-  //Free space?
-  //listDir("/", 3);
-  checkLogRotate();
 
   //Remove last boot ini file
   //STORAGE.remove(LAST_BOOT_INI);
@@ -218,51 +217,54 @@ void setup()
     STORAGE.remove(LAST_BOOT_INI);
   }
 
-  //Battery & charging status.
+  // Battery & charging status.
   data.batPerc = truncateFloat(calcBattery(adcVolt),0);
 
-  //Start ST WiFi
-  wifiConnected = connectToNetwork();
+  // Start ST WiFi
+  cah.connectToNetwork(conf("connect_timeout").toInt() * 1000L);
   //Fall back to AP if connection error and button pressed
-  if(!wifiConnected && !digitalRead(USER_BUTTON) ){
+  if(!WiFi.isConnected() && !digitalRead(USER_BUTTON) ){
     startAP();
     return;
   }
-  //Synchronize time if needed or every n loops
-  int syncLoops = conf["time_sync_loops"].toInt();
+
+  // Synchronize time if needed or every n loops
+  int syncLoops = conf("time_sync_loops").toInt();
   if(syncLoops == 0 ) syncLoops = 1;
-  if(getEpoch() <= 10000 || (lastBoot["boot_cnt"].toInt() % syncLoops == 0) ){
-    LOG_V("Sync time: %u, syncLoops: %i\n",getEpoch(), lastBoot["boot_cnt"].toInt() % syncLoops);
-    if(wifiConnected) syncTime();
-    else if(getEpoch() > 10000) timeSynchronized = true;
-  }else{
-    timeSynchronized = true;
+  bool syncTime = getEpoch() <= 10000 || ( lastBoot("boot_cnt").toInt() % syncLoops == 0);
+  if(syncTime){
+    cah.syncTime(10000, true);
   }
-  //Initialize on board sensors
-  //Wire can not be initialized at beginng, the bus is busy
+  timeSynchronized = cah.isTimeSync();
+
+  // Initialize on board sensors
   if(!initSensors())
     goToDeepSleep("initFail");
 
   // Setup timers
-  sensorLogMs = millis() + conf["sleep_time"].toInt() * 1000;
+  sensorLogMs = millis() + conf("sleep_time").toInt() * 1000;
   sensorReadMs = millis() + SENSORS_READ_INTERVAL;
   sleepCheckMs = millis() + SLEEP_CHECK_INTERVAL;
 
-  //Log sensors and go to sleep
-  if(!wifiConnected) return;
+  // Log sensors and go to sleep
+  if(!WiFi.isConnected()) return;
 
-  //Connect to mqtt broker
+  // Connect to mqtt broker
   mqttConnect();
   if(mqttClient.connected())  //Listen config commands
     mqttSubscribe();
 
-  //Start web server on long button press or on power connected?
   btState = !digitalRead(USER_BUTTON);
-  //btState = true;
+  #if (LOGGER_LOG_LEVEL) > 3
+    btState = true;
+  #endif
+
+  // Start web server on long button press or on power connected?
   if(btState){
     startWebSever();
     ResetCountdownTimer("Webserver start");
   }
+  LOG_D("Setup end..\n");
 }
 
 // Main application loop
@@ -270,50 +272,50 @@ void loop(){
   mqttClient.loop();
   if(pServer) pServer->handleClient();
   if(pWebSocket) pWebSocket->loop();
-  //Read and publish sensors
+  // Read and publish sensors
   if (millis() - sensorReadMs >= SENSORS_READ_INTERVAL){
-    //Is time sync
+    // Is time sync
     if(getEpoch() > 10000) timeSynchronized = true;
 
-    //Read sensor values,
+    // Read sensor values,
     readSensors();
 
-    //Append log line on sleep_time interval
-    if( millis() - sensorLogMs >= conf["sleep_time"].toInt() * 1000){
+    // Append log line on sleep_time interval
+    if( millis() - sensorLogMs >= conf("sleep_time").toInt() * 1000){
       logSensors();
       sensorLogMs =  millis();
     }
-    //LOG_D("loop. apStarted: %i, wifiConnected: %i\n",apStarted, wifiConnected);
-    if(!apStarted && !wifiConnected) goToDeepSleep("conFail");
 
-    //Send measurement to web sockets to update page
+    LOG_V("loop. apStarted: %i, wifiConnected: %i\n",apStarted, wifiConnected);
+    if(!conf.isAPEnabled() && !WiFi.isConnected()) goToDeepSleep("conFail");
+
+    // Send measurement to web sockets to update page
     wsSendSensors();
 
-    //Publish JSON to mqtt
+    // Publish JSON to mqtt
     publishSensors();
 
-    //Remember last volt
+    // Remember last volt
     lastBoot.put("bat_voltage", String(data.batVolt, 2),true);
     lastBoot.put("bat_perc", String(data.batPerc, 0),true);
 
     data.sleepReason = "noSleep";
 
-    //Read battery status
+    // Read battery status
     adcVolt =  readBatteryADC();
 
-    //Reset loop millis
+    // Reset loop millis
     sensorReadMs = millis();
   }
 
-  //Check if it is time to sleep
+  // Check if it is time to sleep
   if (millis() - sleepCheckMs >= SLEEP_CHECK_INTERVAL){
-    //Sleep count down
+    // Sleep count down
     sleepTimerCountdown = (sleepTimerCountdown > SLEEP_CHECK_INTERVAL) ? (sleepTimerCountdown -= SLEEP_CHECK_INTERVAL) : 0L;
 
     LOG_D("Sleep count down: %lu\n", sleepTimerCountdown);
 
     if(isClientConnected(pServer)){
-      //LOG_D("No sleep, clients connected\n");
       ResetCountdownTimer("Clients connected");
     }
     //Timeout -> sleep
@@ -324,35 +326,31 @@ void loop(){
     sleepCheckMs = millis();
   }
 
-  //Check user button
+  // Check user button
   btState = !digitalRead(USER_BUTTON);
   if(btState){
-    //LOG_D("bt: %i\n", btState);
     if(!btPress) btPressMs = millis();
     btPress = true;
     ResetCountdownTimer("Button down");
   }else if(btPress){ //Was pressed and released
-    //Update sensors
+    // Update sensors
     sensorReadMs = millis() + SENSORS_READ_INTERVAL;
     btPress = false;
     LOG_D("Button press for: %lu\n", millis() - btPressMs);
-    //Start ap
+    // Start ap
     if(millis() - btPressMs > RESET_CONFIGS_INTERVAL){
       startAP();
       startWebSever();
       ResetCountdownTimer("Long Button down");
-      //reset();
-      //delay(1009);
-      //ESP.restart();
     }
     startWebSever();
   }
-  //Clear mqtt retained?
+  // Clear mqtt retained?
   clearMqttRetainMsg();
   delay(5);
 }
 
-//Logger functions
+// Logger functions
 #define MAX_LOG_FMT 128
 static char fmtBuf[MAX_LOG_FMT];
 static char outBuf[512];
