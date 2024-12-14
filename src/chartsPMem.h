@@ -233,7 +233,7 @@ async function changeGraph(i){
         file = list.options[n].value
         list.selectedIndex = n;
     }
-    const r = await drawLog("/data/" + $('#months_list').value + "/" + file);
+    const r = await drawLog(file);
 }
 
 async function changeMonth(i){
@@ -265,7 +265,7 @@ async function listFiles(dir="") {
             var lines = txt.split(/\r\n|\n/);
             while (lines.length) {
                 var line = lines.shift()
-                if(line=="") continue;
+                if(line=="" || lines.length == 1) continue;
                 if(dir==""){
                     if(line.startsWith("[") )
                         $('#months_list').add(new Option(line.replace("[","").replace("]","").replace("/data/","")));
