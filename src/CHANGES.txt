@@ -1,4 +1,6 @@
-APP_VER "1.2.5" // Rotate log files to free space and fix some SPIFFS errors. 
+APP_VER "1.2.6" // Update configAssist 2.8.6
+                // Moved to LittleFs.
+APP_VER "1.2.5" // Rotate log files to free space and fix some SPIFFS errors.
                 // Subscribe to hasio/status and send discovery messages
                 // Update libraries to latest version
 APP_VER "1.2.4" // Home assistant discovery as a device. Auto adjust soil min max values.Updated ConfigAssist v2.8.3
