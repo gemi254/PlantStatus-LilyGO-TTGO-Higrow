@@ -11,12 +11,12 @@ float calcBattery(uint16_t AdcVolt){
   // max adc: 2074 min adc: 1534
 
   //Battery adc readings limits
-  float bat_reading_low = atof(conf["bat_adc_low"].c_str());
-  float bat_reading_high = atof(conf["bat_adc_high"].c_str());
+  float bat_reading_low = atof(conf("bat_adc_low").c_str());
+  float bat_reading_high = atof(conf("bat_adc_high").c_str());
 
   //Battery voltage limits
-  float bat_volt_low = atof(conf["bat_reading_low"].c_str());
-  float bat_volt_high = atof(conf["bat_reading_high"].c_str());
+  float bat_volt_low = atof(conf("bat_reading_low").c_str());
+  float bat_volt_high = atof(conf("bat_reading_high").c_str());
 
   float battery_voltage =  ( bat_volt_high - bat_volt_low ) / ( bat_reading_high - bat_reading_low ) * AdcVolt
         +  bat_volt_high - bat_reading_high * ( bat_volt_high - bat_volt_low ) / ( bat_reading_high - bat_reading_low ) ;//true volts
@@ -34,7 +34,7 @@ float calcBattery(uint16_t AdcVolt){
 
   if (batPerc > BATT_PERC_ONPOWER) onPower = true;
   else onPower = false;
-  LOG_I("Battery adcV: %lu, V: %3.3f, Avg perc: %3.1f %%, onPower: %i\n", AdcVolt, battery_voltage, batPerc, onPower);
+  LOG_D("Battery adcV: %lu, V: %3.3f, Avg perc: %3.1f %%, onPower: %i\n", AdcVolt, battery_voltage, batPerc, onPower);
   return batPercAgv;
 
 }
