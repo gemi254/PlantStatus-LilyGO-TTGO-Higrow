@@ -1,5 +1,5 @@
 bool initDHTsensor(){
-  uint8_t dht_type = conf["dht_type"].toInt();
+  uint8_t dht_type = conf("dht_type").toInt();
   LOG_D("Init DHT sensor on pin: %i, type: %i\n",DHT_PIN, dht_type);
   pDht = new DHT(DHT_PIN, dht_type);
   pDht->begin();
@@ -9,7 +9,7 @@ bool initDHTsensor(){
     //float t = pDht->readTemperature(false);
     float h = pDht->readHumidity();
     if (isnan(h)) {
-      LOG_E("Failed to read from DHT sensor!\n");
+      LOG_E("DHT sensor fail type: %i!\n", dht_type);
       // Wait a few seconds between measurements.
       delay(500);
     }else{
@@ -49,7 +49,7 @@ bool initBH1750(){
 // Initialize on board sensors according config
 bool initSensors(){
   //Temp/hum sensors
-  if(conf["dht_type"]=="11" || conf["dht_type"]=="21" || conf["dht_type"]=="22"){
+  if(conf("dht_type")=="11" || conf("dht_type")=="21" || conf("dht_type")=="22"){
     dhtFound = initDHTsensor();
   }else{
     bmeFound = initBME280();
@@ -71,22 +71,24 @@ uint32_t readSoil(){
   uint32_t soil = analogReadAvg(SOIL_PIN, SOIL_NO_OF_SAMPLES);
 
   // Auto adjust min max
-  if(conf["auto_adjust_soil"].toInt()){
+  if(conf("auto_adjust_soil").toInt()){
     bool save = false;
-    if(soil < conf["soil_min"].toInt()){
-      conf.put("soil_min", soil);
+    if(soil < conf("soil_min").toInt()){
+      //conf.put("soil_min", soil);
+      conf["soil_min"] = soil;
       LOG_I("Adjust soil min: %lu\n", soil);
       save = true;
     }
-    if(soil > conf["soil_max"].toInt()){
-      conf.put("soil_max", soil);
+    if(soil > conf("soil_max").toInt()){
+      //conf.put("soil_max", soil);
+      conf["soil_max"] = soil;
       LOG_I("Adjust soil max: %lu\n", soil);
       save = true;
     }
     if(save) conf.saveConfigFile();
 
   }
-  uint8_t soilM = map(soil, conf["soil_min"].toInt(), conf["soil_max"].toInt(), 100, 0);
+  uint8_t soilM = map(soil, conf("soil_min").toInt(), conf("soil_max").toInt(), 100, 0);
   LOG_D("Read soil: %lu, map: %lu\n",soil ,soilM);
   return soilM;
 }
@@ -235,26 +237,26 @@ void logSensors(){
     line += "DateTime               " + sep;
     line += "temp" + sep;
     line += "humid" + sep;
-    if(conf["dht_type"]=="BMP280")
+    if(conf("dht_type")=="BMP280")
       line += "pressr" + sep;
     line += "lux" + sep;
     line += "soil" + sep;
     line += "salt" + sep;
-#ifdef DEBUG_MODE
+#ifdef VERBOSE_MODE
     line += "batAdc" + sep;
 #endif
     line += "batPerc";
     line +="\n";
   }
   line += data.time + sep;
-  line += String(data.temp + atof(conf["offs_temp"].c_str()), 1) + sep;
-  line += String(data.humid + atof(conf["offs_humid"].c_str()), 1) + sep;
-  if(conf["dht_type"]=="BMP280")
-    line += String(data.pressure + atof(conf["offs_pressure"].c_str()), 1) + sep;
-  line += String(data.lux + atof(conf["offs_lux"].c_str()), 1) + sep;
-  line += (data.soil + conf["offs_soil"].toInt()) + sep;
-  line += (data.salt + conf["offs_salt"].toInt()) + sep;
-  #ifdef DEBUG_MODE
+  line += String(data.temp + atof(conf("offs_temp").c_str()), 1) + sep;
+  line += String(data.humid + atof(conf("offs_humid").c_str()), 1) + sep;
+  if(conf("dht_type")=="BMP280")
+    line += String(data.pressure + atof(conf("offs_pressure").c_str()), 1) + sep;
+  line += String(data.lux + atof(conf("offs_lux").c_str()), 1) + sep;
+  line += (data.soil + conf("offs_soil").toInt()) + sep;
+  line += (data.salt + conf("offs_salt").toInt()) + sep;
+  #ifdef VERBOSE_MODE
     line += String(data.batAdcVolt) + sep;
   #endif
   line += String(data.batPerc, 0);
