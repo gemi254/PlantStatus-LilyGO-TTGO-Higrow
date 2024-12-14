@@ -3,9 +3,9 @@
 
 // Get mqtt base publish path + topic]
 String getMqttPath(const String &topic, const String device = "sensor/"){
-    String topicStr = conf["mqtt_topic_prefix"];
+    String topicStr = conf("mqtt_topic_prefix");
     if(!topicStr.endsWith("/")) topicStr += "/";
-    if(device != "") topicStr += device + conf["plant_name"] + topic;
+    if(device != "") topicStr += device + conf("plant_name") + topic;
     else topicStr += topic;
     return topicStr ;
 }
@@ -14,12 +14,12 @@ String getMqttHasAvailPath(){  return  getMqttPath(F("/status"),""); }
 
 // Connect to mqtt
 void mqttConnect(){
-  String broker = conf["mqtt_broker"];
+  String broker = conf("mqtt_broker");
   if(broker.length()<1) return;
-  int port =  conf["mqtt_port"].toInt();
+  int port =  conf("mqtt_port").toInt();
   //Connect to mqtt broker
   mqttClient.setServer(broker.c_str(), port);
-  bool con = mqttClient.connect(broker.c_str(), conf["mqtt_user"].c_str(), conf["mqtt_pass"].c_str());
+  bool con = mqttClient.connect(broker.c_str(), conf("mqtt_user").c_str(), conf("mqtt_pass").c_str());
   if (!con) {
     LOG_E("Connect to MQTT broker: %s:%i FAILED code: %u \n",broker, port, mqttClient.state());
     goToDeepSleep("mqttFail");
@@ -53,8 +53,8 @@ void mqttPublish(const char* topic, const char* payload, boolean retained){
 
  //Nice print of configuration mqtt message
   LOG_D("mqtt topic: %s\n", topic);
-  LOG_D("mqtt payload: %s\n", payload);
- 
+  LOG_V("mqtt payload: %s\n", payload);
+
   if( mqttClient.publish( topic, payload, retained ) ){
     LOG_V("Message published\n");
   } else {
@@ -84,7 +84,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
   LOG_I("Mqtt rcv topic: %s, msg: %s\n", topic, msg.c_str());
   //Hasio status online message
-  if ((String(topic) == conf["mqtt_topic_prefix"] + "status") && msg == "online"){
+  if ((String(topic) == conf("mqtt_topic_prefix") + "status") && msg == "online"){
     mqttSetupDevice();
     return;
   }
@@ -109,9 +109,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   val.trim();
   LOG_D("Exec set key: %s=%s\n", key.c_str(), val.c_str());
   if(key=="sleep"){
-    if(val=="0"){
+    if(val!=""){
       //Don't sleep. Wait for connection
-      ResetCountdownTimer("Mqtt sleep off");
+      ResetCountdownTimer("Mqtt sleep off", val.toInt()*1000);
       //Start web server if needed
       startWebSever();
     }
@@ -143,7 +143,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
           if(sign=='-') n = i - inc;
           else n = i + inc;
           LOG_D("Key[%s] inc int: %i %c %i = %i\n", key.c_str(), i, sign, inc, n);
-          conf.put(key, String(n) );
+          //conf.put(key, String(n) );
+          conf[key] = n;
         //Float
         }else if(isFloat(kval.c_str()) && isFloat(val.c_str()) ){
           float v = atof(kval.c_str());
@@ -152,14 +153,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
           if(sign=='-') n = v - inc;
           else n = v + inc;
           LOG_D("Key[%s] float: %3.2f %c %3.2f = %3.2f\n", key.c_str(), v, sign, inc, n);
-          conf.put(key, String(n) );
+          //conf.put(key, String(n) );
+          conf[key] = n;
         }else{
           //String inc? //conf.put(key, conf[key].c_str() + val );
           LOG_E("Key %s is not Numeric\n", key.c_str() );
           return;
         }
     }else{
-      conf.put(key, val);
+      //conf.put(key, val);
+      conf[key] = val;
       LOG_D("Update key: %s=%s\n", key.c_str(), val.c_str());
     }
     conf.saveConfigFile();
@@ -173,14 +176,14 @@ void mqttSubscribe(){
   mqttClient.subscribe(topicCmd.c_str());
   LOG_I("Subscribed at: %s\n",topicCmd.c_str());
 
-  topicCmd  = getMqttPath(F("/status"),"");
+  topicCmd  = getMqttPath(F("status"),"");
   LOG_I("Subscribed at: %s\n",topicCmd.c_str());
 }
 // Get mqqtt json device
 String hasioGetDevice(){
     String jDev = F("{\n");
-    jDev += "    " +JSON_TEMPLATE(F("name"),  QUOTE(conf["plant_name"]) ) + F(",\n");
-    jDev += "    " +JSON_TEMPLATE(F("model"), QUOTE(conf["host_name"] + "-" + ESP.getChipModel()) ) + F(",\n");
+    jDev += "    " +JSON_TEMPLATE(F("name"),  QUOTE(conf("plant_name")) ) + F(",\n");
+    jDev += "    " +JSON_TEMPLATE(F("model"), QUOTE(conf("host_name") + "-" + ESP.getChipModel()) ) + F(",\n");
     jDev += "    " +JSON_TEMPLATE(F("connections"), "[[" + QUOTE("mac")  + ", " + QUOTE( WiFi.macAddress() )+ "]]") + F(",\n");
     jDev += "    " +JSON_TEMPLATE(F("sw_version"), QUOTE(APP_VER)) + F(",\n");
     jDev += "    " +JSON_TEMPLATE(F("identifiers"), "[" + QUOTE( ESP.getChipModel() + String("-") + ESP.getChipRevision()) + "]") + F(",\n");
@@ -196,8 +199,8 @@ void hasioSetupEntitie(const String &name, const String &displayName, String uom
   JsonDocument doc_c;
   JsonObject root = doc_c.to<JsonObject>();
   root["name"] =  displayName;
-  root["unique_id"] = conf["host_name"]  + F("_") + getChipID() + F("-") + name;
-  //root["object_id"] = conf["host_name"] +" "+ name;
+  root["unique_id"] = conf("host_name")  + F("_") + getChipID() + F("-") + name;
+  //root["object_id"] = conf("host_name") +" "+ name;
   root["state_topic"] = getMqttPath(stateTopic);
   root["value_template"] = "{{ value_json['" + name +"'] }}";
   if(stateTopic==F("/sensors"))
@@ -227,15 +230,15 @@ void hasioSetupEntitie(const String &name, const String &displayName, String uom
 
 // Home Assitant MQTT Diagnostics network status
 void hasioNetworkStatus(){
-  LOG_D("Sending homeassistant mqtt Config Status ..\n");  
+  LOG_D("Sending homeassistant mqtt Config Status ..\n");
   const String topic = getMqttPath(F("/network/config")).c_str();
 
   JsonDocument doc_c;
   JsonObject root = doc_c.to<JsonObject>();
 
-  root["name"] = "Network status";  
-  root["unique_id"] = conf["host_name"]  + F("_") + getChipID() + F("-") +  F("network");
-  //root["object_id"] = conf["host_name"] +" "+ "network";
+  root["name"] = "Network status";
+  root["unique_id"] = conf("host_name")  + F("_") + getChipID() + F("-") +  F("network");
+  //root["object_id"] = conf("host_name") +" "+ "network";
   root["entity_category"] = "diagnostic";
 
   root["icon"] = "mdi:check-network";
@@ -255,11 +258,11 @@ void hasioNetworkStatus(){
 // Home Assitant MQTT Autodiscovery messages
 // https://www.home-assistant.io/integrations/sensor/#device-class
 void mqttSetupDevice(){
-    
+
     //Sensors fields
     hasioSetupEntitie("lux",              "Luminosity", "lx", "illuminance");
     hasioSetupEntitie("humid",            "Humidity", "%",  "humidity");
-    if(conf["dht_type"]=="BMP280")
+    if(conf("dht_type")=="BMP280")
       hasioSetupEntitie("press",          "Presure", "hPa","pressure");
     hasioSetupEntitie("soil",             "Soil moisture", "%",  "moisture");
     hasioSetupEntitie("salt",             "Soil salt", "µS/cm");
@@ -269,7 +272,7 @@ void mqttSetupDevice(){
     hasioSetupEntitie("IpAddress",        "Ip address", "x",  "x", "/state");
     hasioSetupEntitie("RSSI",             "Signal strength", "dBm","signal_strength", "/state");
     hasioSetupEntitie("batPerc",          "Battery", "%",  "battery", "/state");
-    #ifdef DEBUG_MODE
+    #ifdef VERBOSE_MODE
       hasioSetupEntitie("freeSpace",      "Free space", "Kb", "x", "/state");
       hasioSetupEntitie("batChargeDate",  "Battery charge date", "x", "date", "/state");
       hasioSetupEntitie("batADC",         "Battery adc", " ", "x", "/state");
@@ -297,15 +300,15 @@ String getJsonBuff(const byte type ){
   //Set the values in the document according to SensorData
   JsonObject plant = doc.to<JsonObject>();
   if(type == 0 || type == 1){
-    plant["sensorName"] = conf["plant_name"];
+    plant["sensorName"] = conf("plant_name");
     plant["time"] = data.time;
-    plant["lux"] = truncateFloat(data.lux + atof(conf["offs_lux"].c_str()), 1);
-    plant["temp"] = truncateFloat(data.temp + atof(conf["offs_temp"].c_str()), 1);
-    plant["humid"] = truncateFloat(data.humid + atof(conf["offs_humid"].c_str()), 1);
-    if(conf["dht_type"]=="BMP280")
-      plant["press"] = truncateFloat(data.pressure + atof(conf["offs_pressure"].c_str()), 1);
-    plant["soil"] = (data.soil + conf["offs_soil"].toInt());
-    plant["salt"] = (data.salt + conf["offs_salt"].toInt());
+    plant["lux"] = truncateFloat(data.lux + atof(conf("offs_lux").c_str()), 1);
+    plant["temp"] = truncateFloat(data.temp + atof(conf("offs_temp").c_str()), 1);
+    plant["humid"] = truncateFloat(data.humid + atof(conf("offs_humid").c_str()), 1);
+    if(conf("dht_type")=="BMP280")
+      plant["press"] = truncateFloat(data.pressure + atof(conf("offs_pressure").c_str()), 1);
+    plant["soil"] = (data.soil + conf("offs_soil").toInt());
+    plant["salt"] = (data.salt + conf("offs_salt").toInt());
     // plant["soilTemp"] = config.soilTemp;
     // plant["saltadvice"] = config.saltadvice;
     // plant["plantValveNo"] = plantValveNo;
@@ -313,7 +316,7 @@ String getJsonBuff(const byte type ){
 
   if(type == 0 || type == 2){
     plant["batPerc"] = data.batPerc;
-    #ifdef DEBUG_MODE
+    #ifdef VERBOSE_MODE
       plant["freeSpace"] = (STORAGE.totalBytes() - STORAGE.usedBytes()) / 1024;
       plant["batChargeDate"] = data.batChargeDate;
       plant["batADC"] = data.batAdcVolt;
