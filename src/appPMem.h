@@ -274,7 +274,7 @@ PROGMEM const char HTML_PAGE_HOME_BUTTON_VIEWLOG[] = R"=====(
   <button title='View debug log' onClick="window.open('/cmd?view={log}', '_blank');">View log</button>
 )=====";
 PROGMEM const char HTML_PAGE_HOME_BUTTON_RESETLOG[] = R"=====(
-  <button title='Reset debug log file. All data will be lost.' onClick="window.location.href ='/cmd?resetLog={log}';">Remove log</button>
+  <button title='Reset debug log file. All data will be lost.' onClick="window.location.href ='/cmd?resetLog={log}';">Reset log</button>
 )=====";
 // Template for page end
 PROGMEM const char HTML_PAGE_HOME_END[] = R"=====(
