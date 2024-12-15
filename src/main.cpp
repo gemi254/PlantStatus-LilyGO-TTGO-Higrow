@@ -179,13 +179,13 @@ void setup()
   Serial.begin(115200);
   Serial.print("\n\n\n\n");
   Serial.flush();
-  LOG_I("* * * * Starting v%s * * * * * \n", APP_VER);
-
-  // Measure bat with no wifi enabled
-  adcVolt =  readBatteryADC();
 
   // Enable configAssist logPrint to file?
   logToFile = conf("logFile").toInt();
+
+  LOG_I("* * * * Starting v%s * * * * * \n", APP_VER);
+  // Measure bat with no wifi enabled
+  adcVolt =  readBatteryADC();
 
   // Check free space and delete old files if needed
   checkLogRotate();
@@ -366,7 +366,11 @@ void _log_printf(const char *format, ...){
   //size_t msgLen = strlen(outBuf);
   Serial.print(outBuf);
   if (logToFile){
+    #ifdef CA_USE_LITTLEFS
+    if(!logFile) logFile = STORAGE.open(LOGGER_LOG_FILENAME, "a+", true);
+    #else
     if(!logFile) logFile = STORAGE.open(LOGGER_LOG_FILENAME, "a+");
+    #endif
     if(!logFile){
       Serial.printf("Failed to open log file: %s\n", LOGGER_LOG_FILENAME);
       logToFile = false;
