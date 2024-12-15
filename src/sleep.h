@@ -23,7 +23,8 @@ void goToDeepSleep(const char *reason, bool error = true)
   btStop();
 
   uint16_t sleepTime = (error)?conf("sleep_time_error").toInt() : conf("sleep_time").toInt();
-#if LOGGER_LOG_LEVEL > 3
+#if LOGGER_LOG_LEVEL > 4
+  // Debug mode sleep for 30 secs
   sleepTime = 30;
 #endif
   //Configure the timer to wake us up!
