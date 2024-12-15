@@ -276,8 +276,14 @@ static void handleCmd(){
       reset();
    }else if(cmd=="resetLog"){
       out.replace("{title}", "Reseting log");
+      if(logFile) logFile.close();
       STORAGE.remove(LOGGER_LOG_FILENAME);
-      out.replace("{msg}", "Deleted log file");
+      #ifdef CA_USE_LITTLEFS
+      if(!logFile) logFile = STORAGE.open(LOGGER_LOG_FILENAME, "a+", true);
+      #else
+      if(!logFile) logFile = STORAGE.open(LOGGER_LOG_FILENAME, "a+");
+      #endif
+      out.replace("{msg}", "Reset log file");
     }else{
       out.replace("{title}", "Error");
       out.replace("{msg}", "Unknown command:" + cmd);
