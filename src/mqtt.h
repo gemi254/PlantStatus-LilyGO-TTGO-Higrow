@@ -174,10 +174,10 @@ void mqttSubscribe(){
   //Subscribe to config topic
   mqttClient.setCallback(mqttCallback);
   mqttClient.subscribe(topicCmd.c_str());
-  LOG_I("Subscribed at: %s\n",topicCmd.c_str());
+  LOG_D("Subscribed at: %s\n",topicCmd.c_str());
 
   topicCmd  = getMqttPath(F("status"),"");
-  LOG_I("Subscribed at: %s\n",topicCmd.c_str());
+  LOG_D("Subscribed at: %s\n",topicCmd.c_str());
 }
 // Get mqqtt json device
 String hasioGetDevice(){
