@@ -3,8 +3,8 @@ PROGMEM const char HTML_CHARTS_CSS[] = R"~(
 body { margin: 2px; padding:2px; }
 html, body { width:100%; height:100%; }
 canvas { width: 95vw;  height: 250px;  }
-.label { text-align: center; margin-top: 5px; margin-bottom: 25px; }
-.context { text-align: center; margin-top: 5px; margin-bottom: 15px; }
+.label { text-align: center; margin-top: 5px; margin-bottom: 0px; }
+.context { text-align: center; margin-top: 5px; margin-bottom: 10px; }
 #charts_info { text-align: center; margin-top: 10px; margin-bottom: 10px; }
 #charts { display: grid; justify-content: center; align-items: center; border: 1px solid white; }
 </style>
