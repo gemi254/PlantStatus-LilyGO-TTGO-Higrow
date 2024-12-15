@@ -26,6 +26,9 @@ Wifi settings:
   - connect_timeout:
       label: Seconds to wait until ST connection
       default: 10
+  - conn_failover:
+      label: Connect to next wifi on connection fail.
+      checked: true
       
 Device settings:
   - host_name:
