@@ -7,9 +7,9 @@ bool initDHTsensor(){
   while (i--) {
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
     //float t = pDht->readTemperature(false);
-    float h = pDht->readHumidity();
+    float h = pDht->readHumidity(true);
     if (isnan(h)) {
-      LOG_E("DHT sensor fail type: %i!\n", dht_type);
+      LOG_E("DHT sensor fail, type: %i\n", dht_type);
       // Wait a few seconds between measurements.
       delay(500);
     }else{
@@ -48,13 +48,16 @@ bool initBH1750(){
 }
 // Initialize on board sensors according config
 bool initSensors(){
+  // Light sensor
+  initBH1750();
+
   //Temp/hum sensors
   if(conf("dht_type")=="11" || conf("dht_type")=="21" || conf("dht_type")=="22"){
     dhtFound = initDHTsensor();
   }else{
     bmeFound = initBME280();
   }
-  initBH1750();
+
   return true;
 }
 
@@ -262,7 +265,6 @@ void logSensors(){
   line += String(data.batPerc, 0);
   line +="\n";
   writeFile(fullPath.c_str(), line.c_str());
-  LOG_V("Log to: %s\n, line: %s\n", fullPath.c_str());
-  LOG_D("Log: %s",line.c_str() );
+  LOG_I("Log: %s",line.c_str() );
 }
 
