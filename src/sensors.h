@@ -108,6 +108,19 @@ float readSoilTemp(){
   #endif
   return temp;
 }
+
+#ifdef USE_AUTO_WATER
+void WateringCallback(bool value)
+{
+    LOG_D("motorButton Triggered: " + String((value) ? "true" : "false"));
+    digitalWrite(MOTOR_PIN, value);
+#ifdef USE_ADAFRUIT_NEOPIXEL
+    pixels->setPixelColor(0, value ? 0x00FF00 : 0);
+    pixels->show();
+#endif    
+    //motorButton->update(value);
+}
+#endif  /*__HAS_MOTOR__*/
 /*
 After the measurement Time register value is changed according to the result:
 lux > 40000 ==> MTreg =  32
@@ -213,6 +226,17 @@ void readSensors(){
   data.sleepReason = lastBoot["sleep_reason"];
   data.lastError = (lastBoot["last_error"]=="") ? "none" : lastBoot["last_error"];
 
+#ifdef USE_AUTO_WATER
+  if (data.soil < WATERING_MIN_SOIL) {
+      LOG_D("Start adding water");
+      WateringCallback(true);
+  }
+  if (data.soil >= WATERING_MAX_SOIL) {
+      LOG_D("Stop adding water");
+      WateringCallback(false);
+  }
+#endif  /*USE_AUTO_WATER*/
+
   //Next auto reading reset
   sensorReadMs = millis();
 }
@@ -267,4 +291,3 @@ void logSensors(){
   writeFile(fullPath.c_str(), line.c_str());
   LOG_I("Log: %s",line.c_str() );
 }
-
