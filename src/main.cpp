@@ -22,6 +22,22 @@
   #define LOGGER_LOG_LEVEL 3       // Errors & Warnings & Info & Debug & Verbose
 #endif
 
+#define USE_AUTO_WATER             // Enable auto watering callback
+
+#ifdef USE_AUTO_WATER
+#define WATERING_MIN_SOIL       (26)
+#define WATERING_MAX_SOIL       (40)
+#define MOTOR_PIN               (19)
+
+#define USE_ADAFRUIT_NEOPIXEL      // Enable adafruit neopixel 
+#ifdef  USE_ADAFRUIT_NEOPIXEL
+#include <Adafruit_NeoPixel.h>
+Adafruit_NeoPixel *pixels = NULL;
+#define RGB
+#define RGB_PIN                 (18)
+#endif
+#endif
+
 //#define VERBOSE_MODE             // Uncomment to enter more details mode
 void _log_printf(const char *format, ...);
 #include <ConfigAssist.h>          // Config assist class
@@ -30,7 +46,7 @@ void _log_printf(const char *format, ...);
 bool logToFile = false;
 static File logFile;
 
-#define APP_VER           "1.2.6"  // Update config assist && move to yaml config
+#define APP_VER           "1.2.7"  // Update config assist && move to yaml config
 #define LED_PIN           (13)
 #define I2C_SDA           (25)
 #define I2C_SCL           (26)
