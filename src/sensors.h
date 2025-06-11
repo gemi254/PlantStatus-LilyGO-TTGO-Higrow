@@ -112,7 +112,7 @@ float readSoilTemp(){
 #ifdef USE_AUTO_WATER
 void WateringCallback(bool value)
 {
-    LOG_D("motorButton Triggered: " + String((value) ? "true" : "false"));
+    LOG_D("motorButton Triggered: %s\n", (value) ? "true" : "false");
     digitalWrite(MOTOR_PIN, value);
 #ifdef USE_ADAFRUIT_NEOPIXEL
     pixels->setPixelColor(0, value ? 0x00FF00 : 0);
