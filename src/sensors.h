@@ -23,7 +23,7 @@ bool initDHTsensor(){
 
 bool initBME280(){
   if (wireOk){
-    LOG_I("Wire begin OK\n");
+    LOG_D("Wire begin OK\n");
     pBmp = new Adafruit_BME280();
     if (!pBmp->begin()){
       LOG_E("BME280 begin error\n");
@@ -46,6 +46,42 @@ bool initBH1750(){
   }
   return true;
 }
+
+#ifdef USE_AUTO_WATER
+void initWatering(){
+#ifdef  USE_ADAFRUIT_NEOPIXEL
+  LOG_D("Watering init\n");
+  // IO18 is initialized as RGB pixel pin
+  pixels = new  Adafruit_NeoPixel(1, RGB_PIN, NEO_GRB + NEO_KHZ800);
+
+  if (pixels) {
+      pixels->begin();
+      pixels->setBrightness(50);
+
+      pixels->setPixelColor(0, pixels->Color(255, 0, 0)); pixels->show(); delay(1000);
+      pixels->setPixelColor(0, pixels->Color(0, 255, 0)); pixels->show(); delay(1000);
+      pixels->setPixelColor(0, pixels->Color(0, 0, 255)); pixels->show(); delay(1000);
+      pixels->setPixelColor(0, pixels->Color(0, 0, 0)); pixels->show();
+  }
+#endif
+
+  // IO19 is initialized as motor drive pin
+  pinMode(MOTOR_PIN, OUTPUT);
+  digitalWrite(MOTOR_PIN, LOW);  
+}
+
+void WateringCallback(bool value)
+{
+    LOG_D("motorButton Triggered: %s\n", (value) ? "true" : "false");
+    digitalWrite(MOTOR_PIN, value);
+#ifdef USE_ADAFRUIT_NEOPIXEL
+    pixels->setPixelColor(0, value ? 0x00FF00 : 0);
+    pixels->show();
+#endif    
+    //motorButton->update(value);
+}
+#endif  /*__HAS_MOTOR__*/
+
 // Initialize on board sensors according config
 bool initSensors(){
   // Light sensor
@@ -57,6 +93,10 @@ bool initSensors(){
   }else{
     bmeFound = initBME280();
   }
+  
+  #ifdef USE_AUTO_WATER
+    initWatering();
+  #endif
 
   return true;
 }
@@ -109,18 +149,6 @@ float readSoilTemp(){
   return temp;
 }
 
-#ifdef USE_AUTO_WATER
-void WateringCallback(bool value)
-{
-    LOG_D("motorButton Triggered: %s\n", (value) ? "true" : "false");
-    digitalWrite(MOTOR_PIN, value);
-#ifdef USE_ADAFRUIT_NEOPIXEL
-    pixels->setPixelColor(0, value ? 0x00FF00 : 0);
-    pixels->show();
-#endif    
-    //motorButton->update(value);
-}
-#endif  /*__HAS_MOTOR__*/
 /*
 After the measurement Time register value is changed according to the result:
 lux > 40000 ==> MTreg =  32
@@ -228,11 +256,11 @@ void readSensors(){
 
 #ifdef USE_AUTO_WATER
   if (data.soil < WATERING_MIN_SOIL) {
-      LOG_D("Start adding water");
+      LOG_D("Start adding water\n");
       WateringCallback(true);
   }
   if (data.soil >= WATERING_MAX_SOIL) {
-      LOG_D("Stop adding water");
+      LOG_D("Stop adding water\n");
       WateringCallback(false);
   }
 #endif  /*USE_AUTO_WATER*/
